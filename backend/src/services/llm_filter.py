@@ -1,9 +1,14 @@
 import json
 import os
-import anthropic
+from openai import AsyncOpenAI
 from ..prompts.extract import SYSTEM_PROMPT, USER_TEMPLATE
 
-_client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY", ""))
+_client = AsyncOpenAI(
+    api_key=os.environ.get("OPENAI_API_KEY", ""),
+    base_url=os.environ.get("OPENAI_BASE_URL", "https://api.tokencow.dev/v1"),
+)
+
+MODEL_NAME = "deepseek/deepseek-v4-flash"
 
 BATCH_SIZE = 50
 
@@ -29,13 +34,14 @@ async def llm_filter_candidates(candidates: list[dict]) -> list[dict]:
 
 async def _call_haiku(batch: list[dict]) -> list[dict]:
     user_msg = USER_TEMPLATE.format(candidates_json=json.dumps(batch, ensure_ascii=False, indent=2))
-    response = _client.messages.create(
-        model="claude-haiku-4-5-20251001",
-        max_tokens=4096,
-        system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": user_msg}],
+    response = await _client.chat.completions.create(
+        model=MODEL_NAME,
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": user_msg},
+        ],
     )
-    text = response.content[0].text.strip()
+    text = (response.choices[0].message.content or "").strip()
     # strip markdown code fences if present
     if text.startswith("```"):
         text = text.split("\n", 1)[1].rsplit("```", 1)[0]

@@ -1,6 +1,10 @@
 import re
+import nltk
 import spacy
 from rake_nltk import Rake
+
+nltk.download("punkt_tab", quiet=True)
+nltk.download("stopwords", quiet=True)
 
 _nlp = spacy.load("en_core_web_sm")
 _rake = Rake()

@@ -82,7 +82,7 @@ actor ImportService {
         return try JSONDecoder().decode(ImportStatusResponse.self, from: data)
     }
 
-    func waitForCompletion(jobId: String, timeout: TimeInterval = 30) async throws -> ImportStatusResponse {
+    func waitForCompletion(jobId: String, timeout: TimeInterval = 120) async throws -> ImportStatusResponse {
         let deadline = Date().addingTimeInterval(timeout)
         while Date() < deadline {
             let status = try await pollStatus(jobId: jobId)
