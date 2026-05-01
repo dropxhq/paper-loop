@@ -65,7 +65,7 @@ struct ReviewView: View {
                     .opacity(showAnswer ? 0 : 1)
                 cardBack
                     .opacity(showAnswer ? 1 : 0)
-                    .rotation3DEffect(.degrees(showAnswer ? 0 : -180), axis: (x: 0, y: 1, z: 0))
+                    .rotation3DEffect(.degrees(180), axis: (x: 0, y: 1, z: 0))
             }
             .rotation3DEffect(.degrees(flipDegrees), axis: (x: 0, y: 1, z: 0))
             .animation(.easeInOut(duration: 0.4), value: flipDegrees)

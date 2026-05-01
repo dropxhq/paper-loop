@@ -105,7 +105,7 @@ struct ImportView: View {
     }
 
     private func pollProgress(jobId: String) async throws {
-        let deadline = Date().addingTimeInterval(120)
+        let deadline = Date().addingTimeInterval(300)
         while Date() < deadline {
             let status = try await ImportService.shared.pollStatus(jobId: jobId)
             switch status.status {
