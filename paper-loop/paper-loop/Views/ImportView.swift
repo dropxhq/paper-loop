@@ -18,35 +18,72 @@ struct ImportView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 24) {
-                Spacer()
+        ZStack {
+            Theme.bg.ignoresSafeArea()
+            ScrollView {
+                VStack(spacing: 14) {
+                    // Hero card
+                    VStack(alignment: .leading, spacing: 12) {
+                        EyebrowBadge(text: "arXiv · PDF · 自动卡片")
+                        Text("导入论文，自动生成可复习词卡")
+                            .font(Font.custom("Georgia", size: 24).weight(.semibold))
+                            .foregroundStyle(Theme.textPrimary)
+                            .lineSpacing(3)
+                        Text("粘贴 arXiv 链接或上传本地 PDF，词卡自动就绪。")
+                            .font(.system(size: 14))
+                            .foregroundStyle(Theme.textMuted)
+                            .lineSpacing(4)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(16)
+                    .background(
+                        LinearGradient(colors: [Theme.surface, Color(red: 0.961, green: 0.937, blue: 0.902)],
+                                       startPoint: .top, endPoint: .bottom)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.r24))
+                    .overlay(RoundedRectangle(cornerRadius: Theme.r24).stroke(Theme.line, lineWidth: 1))
+                    .shadow(color: Theme.cardShadow, radius: 13, x: 0, y: 10)
 
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("粘贴 arXiv 链接")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                    TextField("https://arxiv.org/abs/...", text: $urlText)
-                        .textFieldStyle(.roundedBorder)
-                        .keyboardType(.URL)
-                        .autocorrectionDisabled()
-                        .textInputAutocapitalization(.never)
+                    // Input card
+                    VStack(spacing: 10) {
+                        SectionHeader("导入来源", badge: "入口")
+
+                        // URL input styled as HTML .input
+                        HStack {
+                            Image(systemName: "link")
+                                .foregroundStyle(Theme.textMuted)
+                            TextField("https://arxiv.org/abs/...", text: $urlText)
+                                .keyboardType(.URL)
+                                .autocorrectionDisabled()
+                                .textInputAutocapitalization(.never)
+                                .font(.system(size: 14))
+                                .foregroundStyle(urlText.isEmpty ? Theme.textMuted : Theme.textPrimary)
+                        }
+                        .frame(minHeight: 48)
+                        .padding(.horizontal, 14)
+                        .background(Theme.surface2)
+                        .clipShape(RoundedRectangle(cornerRadius: Theme.r16))
+                        .overlay(RoundedRectangle(cornerRadius: Theme.r16).stroke(Theme.line, lineWidth: 1))
+
+                        Button(action: startImport) {
+                            Text("导入论文")
+                        }
+                        .buttonStyle(PrimaryButtonStyle())
+                        .disabled(!canImport)
+
+                        statusView
+                    }
+                    .padding(14)
+                    .paperCardStyle()
                 }
-                .padding(.horizontal)
-
-                statusView
-
-                Button(action: startImport) {
-                    Label("导入", systemImage: "arrow.down.doc")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-                .padding(.horizontal)
-                .disabled(!canImport)
-
-                Spacer()
+                .padding(.horizontal, 14)
+                .padding(.top, 10)
+                .padding(.bottom, 24)
             }
-            .navigationTitle("导入")
         }
+        .navigationTitle("导入")
+        .navigationBarTitleDisplayMode(.inline)
+        } // NavigationStack
     }
 
     @ViewBuilder
@@ -61,23 +98,38 @@ struct ImportView: View {
         case .generatingCards:
             progressRow(icon: "sparkles", text: "生成卡片中…")
         case .done:
-            Label("导入成功！", systemImage: "checkmark.circle.fill")
-                .foregroundStyle(.green)
+            HStack(spacing: 6) {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(Theme.primary)
+                Text("导入成功！")
+                    .foregroundStyle(Theme.primary)
+                    .font(.system(size: 14, weight: .medium))
+            }
+            .padding(.top, 4)
         case .failed(let msg):
-            Label(msg, systemImage: "exclamationmark.triangle.fill")
-                .foregroundStyle(.red)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal)
+            HStack(alignment: .top, spacing: 6) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.red)
+                Text(msg)
+                    .foregroundStyle(.red)
+                    .font(.system(size: 13))
+                    .multilineTextAlignment(.leading)
+            }
+            .padding(.top, 4)
         }
     }
 
     private func progressRow(icon: String, text: String) -> some View {
         HStack(spacing: 8) {
             ProgressView()
+                .tint(Theme.primary)
             Image(systemName: icon)
+                .foregroundStyle(Theme.textMuted)
             Text(text)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Theme.textMuted)
+                .font(.system(size: 14))
         }
+        .padding(.top, 4)
     }
 
     private var canImport: Bool {

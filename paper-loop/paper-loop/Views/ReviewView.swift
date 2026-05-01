@@ -21,14 +21,18 @@ struct ReviewView: View {
 
     var body: some View {
         NavigationStack {
-            Group {
-                if dueCards.isEmpty {
-                    emptyStateView
-                } else {
-                    reviewCardView
+            ZStack {
+                Theme.bg.ignoresSafeArea()
+                Group {
+                    if dueCards.isEmpty {
+                        emptyStateView
+                    } else {
+                        reviewCardView
+                    }
                 }
             }
             .navigationTitle("复习")
+            .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(item: $navigateToSource) { card in
                 SourceDetailView(card: card)
             }
@@ -41,11 +45,12 @@ struct ReviewView: View {
         VStack(spacing: 16) {
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 56))
-                .foregroundStyle(.green)
+                .foregroundStyle(Theme.primary)
             Text("今日复习已完成")
                 .font(.title2.bold())
+                .foregroundStyle(Theme.textPrimary)
             Text("继续保持！")
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Theme.textMuted)
         }
     }
 
@@ -54,9 +59,9 @@ struct ReviewView: View {
     private var reviewCardView: some View {
         VStack(spacing: 0) {
             Text("\(currentIndex + 1) / \(dueCards.count)")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .padding(.top)
+                .font(.system(size: 12))
+                .foregroundStyle(Theme.textMuted)
+                .padding(.top, 16)
 
             Spacer()
 
@@ -74,10 +79,12 @@ struct ReviewView: View {
 
             if showAnswer {
                 ratingBar
-                    .padding(.bottom, 24)
+                    .padding(.horizontal, 14)
+                    .padding(.bottom, 28)
             } else {
                 revealButton
-                    .padding(.bottom, 24)
+                    .padding(.horizontal, 14)
+                    .padding(.bottom, 28)
             }
         }
     }
@@ -89,20 +96,33 @@ struct ReviewView: View {
         return VStack(spacing: 16) {
             cardTypeLabel(card.type)
             Text(card.term)
-                .font(.title.bold())
+                .font(Font.custom("Georgia", size: 30))
+                .foregroundStyle(Theme.textPrimary)
                 .multilineTextAlignment(.center)
-            Button {
-                speak(card.type == .sentence ? card.sourceSentence : card.term)
-            } label: {
-                Label(card.type == .sentence ? "播放整句" : "播放发音",
-                      systemImage: "speaker.wave.2")
+                .lineSpacing(2)
+            // Quote box (source sentence preview)
+            if !card.sourceSentence.isEmpty {
+                Text(card.sourceSentence)
+                    .font(.system(size: 14))
+                    .foregroundStyle(Color(red: 0.259, green: 0.239, blue: 0.208))
+                    .lineSpacing(4)
+                    .padding(14)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Theme.surface)
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.r16))
+                    .overlay(RoundedRectangle(cornerRadius: Theme.r16).stroke(Theme.line, lineWidth: 1))
             }
-            .buttonStyle(.bordered)
+            HStack(spacing: 8) {
+                Button(card.type == .sentence ? "播放整句" : "播放发音") {
+                    speak(card.type == .sentence ? card.sourceSentence : card.term)
+                }
+                .buttonStyle(ChipButtonStyle())
+            }
         }
-        .padding(32)
+        .padding(20)
         .frame(maxWidth: .infinity)
-        .background(RoundedRectangle(cornerRadius: 20).fill(.background).shadow(radius: 6))
-        .padding(.horizontal)
+        .paperCardStyle()
+        .padding(.horizontal, 14)
     }
 
     // MARK: - Card Back
@@ -112,38 +132,48 @@ struct ReviewView: View {
         return VStack(alignment: .leading, spacing: 12) {
             cardTypeLabel(card.type)
             Text(card.term)
-                .font(.title2.bold())
+                .font(Font.custom("Georgia", size: 22).weight(.semibold))
+                .foregroundStyle(Theme.textPrimary)
             Divider()
-            Text(card.zhHint)
-                .font(.body)
-                .foregroundStyle(.secondary)
+                .overlay(Theme.line)
+            if !card.zhHint.isEmpty {
+                Text(card.zhHint)
+                    .font(.system(size: 15))
+                    .foregroundStyle(Theme.textMuted)
+            }
             if !card.sourceSentence.isEmpty {
                 Text(card.sourceSentence)
-                    .font(.callout)
-                    .italic()
-                    .foregroundStyle(.primary.opacity(0.8))
+                    .font(.system(size: 14))
+                    .foregroundStyle(Color(red: 0.259, green: 0.239, blue: 0.208))
+                    .lineSpacing(4)
+                    .padding(14)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Theme.surface)
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.r16))
+                    .overlay(RoundedRectangle(cornerRadius: Theme.r16).stroke(Theme.line, lineWidth: 1))
             }
             if let paper = card.paper {
-                HStack {
-                    Image(systemName: "doc.text")
-                    Text(paper.title)
-                        .font(.caption)
-                        .lineLimit(1)
+                Text("来源：\(paper.title)")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Theme.textMuted)
+                    .lineLimit(1)
+            }
+            HStack(spacing: 8) {
+                Button("回到原文") {
+                    navigateToSource = card
                 }
-                .foregroundStyle(.secondary)
+                .buttonStyle(ChipButtonStyle(filled: true))
+
+                Button("播放发音") {
+                    speak(card.term)
+                }
+                .buttonStyle(ChipButtonStyle())
             }
-            Button {
-                navigateToSource = card
-            } label: {
-                Label("回到原文", systemImage: "arrow.up.right.square")
-            }
-            .buttonStyle(.bordered)
-            .padding(.top, 4)
         }
-        .padding(24)
+        .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 20).fill(.background).shadow(radius: 6))
-        .padding(.horizontal)
+        .paperCardStyle()
+        .padding(.horizontal, 14)
     }
 
     // MARK: - Controls
@@ -155,8 +185,7 @@ struct ReviewView: View {
                 showAnswer = true
             }
         }
-        .buttonStyle(.borderedProminent)
-        .padding(.horizontal)
+        .buttonStyle(PrimaryButtonStyle())
     }
 
     private var ratingBar: some View {
@@ -165,11 +194,9 @@ struct ReviewView: View {
                 Button(rating.label) {
                     submitRating(rating)
                 }
-                .buttonStyle(.bordered)
-                .font(.callout)
+                .buttonStyle(ReviewRatingButtonStyle())
             }
         }
-        .padding(.horizontal)
     }
 
     // MARK: - Actions
@@ -201,15 +228,15 @@ struct ReviewView: View {
 
     private func cardTypeLabel(_ type: CardType) -> some View {
         let (label, color): (String, Color) = switch type {
-        case .word: ("单词", .blue)
-        case .phrase: ("术语", .purple)
-        case .sentence: ("例句", .orange)
+        case .word: ("单词", Theme.primary)
+        case .phrase: ("术语", Color(red: 0.5, green: 0.3, blue: 0.7))
+        case .sentence: ("例句", Color(red: 0.8, green: 0.45, blue: 0.1))
         }
         return Text(label)
-            .font(.caption.bold())
-            .padding(.horizontal, 8)
-            .padding(.vertical, 3)
-            .background(color.opacity(0.15))
+            .font(.system(size: 11, weight: .bold))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(color.opacity(0.12))
             .foregroundStyle(color)
             .clipShape(Capsule())
     }
