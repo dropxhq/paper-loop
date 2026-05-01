@@ -4,9 +4,13 @@ import AVFoundation
 
 struct ReviewView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query(filter: #Predicate<Card> { $0.nextReviewAt <= Date() },
-           sort: \Card.nextReviewAt)
-    private var dueCards: [Card]
+    @Query(sort: \Card.nextReviewAt)
+    private var allCards: [Card]
+
+    private var dueCards: [Card] {
+        let now = Date()
+        return allCards.filter { $0.nextReviewAt <= now }
+    }
 
     @State private var currentIndex = 0
     @State private var showAnswer = false

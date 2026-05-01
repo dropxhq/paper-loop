@@ -31,7 +31,8 @@ struct PDFReaderView: UIViewRepresentable {
         pdfView.go(to: page)
 
         // text search highlight
-        if let selections = document.findString(searchText, withOptions: .caseInsensitive), !selections.isEmpty {
+        let selections = document.findString(searchText, withOptions: .caseInsensitive)
+        if !selections.isEmpty {
             let selection = selections[0]
             pdfView.go(to: selection)
             pdfView.currentSelection = selection

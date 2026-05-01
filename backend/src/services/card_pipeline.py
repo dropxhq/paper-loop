@@ -1,7 +1,7 @@
 import httpx
 from collections import defaultdict
-from services.extractor import extract_candidates
-from services.llm_filter import llm_filter_candidates
+from .extractor import extract_candidates
+from .llm_filter import llm_filter_candidates
 
 
 async def _fetch_paper_meta(paper_id: str) -> dict:

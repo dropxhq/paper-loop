@@ -12,7 +12,7 @@ struct SourceDetailView: View {
                 if let paper = card.paper {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("来源论文")
-                            .font(.caption.uppercased())
+                            .font(.caption).textCase(.uppercase)
                             .foregroundStyle(.secondary)
                         Text(paper.title)
                             .font(.headline)
@@ -23,7 +23,7 @@ struct SourceDetailView: View {
 
                 VStack(alignment: .leading, spacing: 8) {
                     Text("前文")
-                        .font(.caption.uppercased())
+                        .font(.caption).textCase(.uppercase)
                         .foregroundStyle(.secondary)
                     Text(card.contextBefore.isEmpty ? "—" : card.contextBefore)
                         .font(.callout)
@@ -32,14 +32,14 @@ struct SourceDetailView: View {
 
                 VStack(alignment: .leading, spacing: 8) {
                     Text("原句")
-                        .font(.caption.uppercased())
+                        .font(.caption).textCase(.uppercase)
                         .foregroundStyle(.secondary)
                     highlightedSentence
                 }
 
                 VStack(alignment: .leading, spacing: 8) {
                     Text("后文")
-                        .font(.caption.uppercased())
+                        .font(.caption).textCase(.uppercase)
                         .foregroundStyle(.secondary)
                     Text(card.contextAfter.isEmpty ? "—" : card.contextAfter)
                         .font(.callout)

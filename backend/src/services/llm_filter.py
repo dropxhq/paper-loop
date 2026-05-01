@@ -1,7 +1,7 @@
 import json
 import os
 import anthropic
-from prompts.extract import SYSTEM_PROMPT, USER_TEMPLATE
+from ..prompts.extract import SYSTEM_PROMPT, USER_TEMPLATE
 
 _client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY", ""))
 

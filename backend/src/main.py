@@ -1,4 +1,3 @@
-import asyncio
 import uuid
 from typing import Any
 
@@ -6,9 +5,9 @@ from fastapi import BackgroundTasks, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from services.arxiv import extract_paper_id, fetch_html, parse_html_paragraphs
-from services.pdf_parser import download_pdf, parse_pdf_paragraphs
-from services.card_pipeline import build_cards
+from .services.arxiv import extract_paper_id, fetch_html, parse_html_paragraphs
+from .services.pdf_parser import download_pdf, parse_pdf_paragraphs
+from .services.card_pipeline import build_cards
 
 app = FastAPI(title="PaperLoop API")
 

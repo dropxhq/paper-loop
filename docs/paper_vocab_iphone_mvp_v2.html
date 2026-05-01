@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>PaperVocab iPhone MVP</title>
+  <style>
+    :root{--bg:#f6f2ea;--surface:#fffdfa;--surface2:#efe6da;--line:rgba(33,29,24,.10);--text:#201d18;--muted:#6f675d;--primary:#0c6865;--primarySoft:#dce8e5;--shadow:0 10px 26px rgba(0,0,0,.08);--r16:16px;--r24:24px;--font:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,'PingFang SC','Hiragino Sans GB','Noto Sans CJK SC',sans-serif}
+    *{box-sizing:border-box} body{margin:0;background:linear-gradient(180deg,#f7f4ee,#f2ede4);font-family:var(--font);color:var(--text);-webkit-font-smoothing:antialiased}
+    .app{max-width:430px;margin:0 auto;min-height:100vh;background:var(--bg)}
+    .top{padding:14px 16px 10px;display:flex;justify-content:space-between;align-items:center}
+    .title{font-weight:700}.sub{font-size:12px;color:var(--muted);margin-top:4px}
+    .icon{width:40px;height:40px;border-radius:999px;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center}
+    .content{padding:0 14px 90px;display:grid;gap:14px}
+    .card{background:var(--surface);border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow);padding:14px}
+    .hero{padding:16px;background:linear-gradient(180deg,var(--surface),#f5efe6)}
+    .eyebrow{display:inline-flex;padding:6px 10px;border-radius:999px;background:var(--primarySoft);color:var(--primary);font-size:11px;font-weight:700}
+    h1{margin:12px 0 8px;font-size:26px;line-height:1.06;letter-spacing:-.03em;font-family:Georgia,'Times New Roman',serif}
+    p{margin:0;color:var(--muted);font-size:14px;line-height:1.55}
+    .sectionTitle{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}.sectionTitle h2{font-size:14px;margin:0;color:var(--text)}
+    .badge{font-size:11px;padding:5px 8px;border-radius:999px;background:var(--primarySoft);color:var(--primary);font-weight:700}
+    .input{border:1px solid var(--line);background:var(--surface2);border-radius:16px;min-height:48px;padding:0 14px;display:flex;align-items:center;color:var(--muted);font-size:14px}
+    .btn{min-height:48px;border-radius:16px;border:none;background:var(--primary);color:#fff;font-weight:700;width:100%;margin-top:10px}
+    .miniGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}.mini{background:var(--surface2);border:1px solid var(--line);border-radius:16px;padding:10px}.mini strong{display:block;font-size:16px}.mini span{font-size:11px;color:var(--muted)}
+    .flash{display:flex;flex-direction:column;gap:14px}.word{font-family:Georgia,serif;font-size:30px;line-height:1;letter-spacing:-.03em}.quote{padding:12px 14px;border-radius:16px;background:#fff;border:1px solid var(--line);font-size:14px;color:#423d35;line-height:1.5}.actions{display:flex;gap:8px;flex-wrap:wrap}.chip{padding:8px 10px;border-radius:999px;border:1px solid var(--line);background:var(--surface2);font-size:12px}.chip.primary{background:var(--primary);color:#fff;border-color:transparent}
+    .reviewBtns{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}.reviewBtns button{min-height:46px;border-radius:14px;border:1px solid var(--line);background:var(--surface2)}
+    .listItem{padding:12px;border-radius:18px;background:var(--surface2);border:1px solid var(--line);margin-top:8px}.meta{font-size:12px;color:var(--muted);margin-top:4px}
+    .tabs{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line);background:rgba(255,255,255,.82);backdrop-filter:blur(10px);position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:min(430px,100%)}
+    .tab{padding:10px 6px 12px;text-align:center;font-size:11px;color:var(--muted)} .tab.active{color:var(--primary);font-weight:700}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="top">
+      <div><div class="title">PaperVocab</div><div class="sub">iPhone MVP · 5 页高保真方向</div></div>
+      <div class="icon">⋯</div>
+    </div>
+    <div class="content">
+      <div class="card hero">
+        <div class="eyebrow">自动词表 · 回链 · 听读复习</div>
+        <h1>把 paper 里值得学的词和句，自动变成可复习卡片。</h1>
+        <p>这版 iPhone MVP 只保留四个主入口：导入、复习、词表、我的。</p>
+      </div>
+      <div class="card">
+        <div class="sectionTitle"><h2>页面 1 · 导入</h2><span class="badge">入口</span></div>
+        <div class="input">粘贴 PDF 链接</div>
+        <button class="btn">上传本地 PDF</button>
+        <div class="miniGrid"><div class="mini"><strong>42</strong><span>预计卡片</span></div><div class="mini"><strong>18</strong><span>术语</span></div><div class="mini"><strong>9</strong><span>关键句</span></div></div>
+      </div>
+      <div class="card">
+        <div class="sectionTitle"><h2>页面 2 · 今日复习</h2><span class="badge">核心</span></div>
+        <div class="flash">
+          <div class="word">self-supervised learning</div>
+          <div class="quote">This objective allows the model to learn useful representations without manual labels.</div>
+          <div class="actions"><span class="chip">▶ 播放整句</span><span class="chip primary">显示答案</span><span class="chip">回到原文</span></div>
+        </div>
+        <div class="reviewBtns"><button>不认识</button><button>模糊</button><button>认识</button><button>已掌握</button></div>
+      </div>
+      <div class="card">
+        <div class="sectionTitle"><h2>页面 3 · 回链详情</h2><span class="badge">关键</span></div>
+        <div class="listItem"><strong>attention mechanism</strong><div class="meta">来源：Attention Is All You Need · Page 3</div></div>
+        <div class="listItem"><strong>原句</strong><div class="meta">We propose a new simple network architecture, the Transformer, based solely on attention mechanisms...</div></div>
+        <div class="actions" style="margin-top:10px"><span class="chip primary">回到原文</span><span class="chip">播放发音</span><span class="chip">看上下文</span></div>
+      </div>
+      <div class="card">
+        <div class="sectionTitle"><h2>页面 4 · 词表</h2><span class="badge">自动生成</span></div>
+        <div class="listItem"><strong>Transformer</strong><div class="meta">术语卡 · 已关联 3 篇 paper</div></div>
+        <div class="listItem"><strong>state-of-the-art</strong><div class="meta">结果句表达 · 可听读复习</div></div>
+        <div class="listItem"><strong>attention mechanism</strong><div class="meta">高频搭配 · 已自动归并</div></div>
+      </div>
+      <div class="card">
+        <div class="sectionTitle"><h2>页面 5 · 我的</h2><span class="badge">设置</span></div>
+        <div class="listItem"><strong>学习统计</strong><div class="meta">本周复习 86 张卡片</div></div>
+        <div class="listItem"><strong>导出</strong><div class="meta">Anki / CSV</div></div>
+        <div class="listItem"><strong>设置</strong><div class="meta">字体大小、朗读速度、深色模式、自动导词规则</div></div>
+      </div>
+    </div>
+    <div class="tabs"><div class="tab">导入</div><div class="tab active">复习</div><div class="tab">词表</div><div class="tab">我的</div></div>
+  </div>
+</body>
+</html>
