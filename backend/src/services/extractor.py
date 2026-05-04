@@ -1,13 +1,17 @@
 import re
 import nltk
 import spacy
-from rake_nltk import Rake
 
 nltk.download("punkt_tab", quiet=True)
-nltk.download("stopwords", quiet=True)
 
 _nlp = spacy.load("en_core_web_sm")
-_rake = Rake()
+
+# Characters that indicate LaTeX / formula fragments
+_LATEX_CHARS = set("\\ { } _ ^ $".split())
+# Matches strings with non-ASCII characters (unicode math, Greek letters, etc.)
+_NON_ASCII_RE = re.compile(r"[^\x00-\x7F]")
+# Matches strings that start with a digit
+_STARTS_WITH_DIGIT_RE = re.compile(r"^\d")
 
 # Academic Word List (abbreviated core set)
 _AWL = {
@@ -49,6 +53,32 @@ _CONTRIBUTION_RE = re.compile(
 )
 
 
+def _is_valid_term(term: str) -> bool:
+    """Return True if term passes all noise filters."""
+    # Rule 1: no non-ASCII characters (unicode math symbols, Greek letters, etc.)
+    if _NON_ASCII_RE.search(term):
+        return False
+    # Rule 2: starts with a digit (numbers, percentages, etc.)
+    if _STARTS_WITH_DIGIT_RE.match(term):
+        return False
+    # Rule 3: contains LaTeX command characters
+    if any(ch in _LATEX_CHARS for ch in term):
+        return False
+    # Rule 4: too short
+    if len(term) < 4:
+        return False
+    words = term.split()
+    # Rule 5: multi-word phrase — any individual word fails rules 1-4
+    if len(words) > 1:
+        for w in words:
+            if _NON_ASCII_RE.search(w) or _STARTS_WITH_DIGIT_RE.match(w) or any(ch in _LATEX_CHARS for ch in w) or len(w) < 1:
+                return False
+    # Rule 6: phrase too long (> 5 words)
+    if len(words) > 5:
+        return False
+    return True
+
+
 def extract_candidates(paragraphs: list[dict]) -> list[dict]:
     candidates = []
 
@@ -59,20 +89,14 @@ def extract_candidates(paragraphs: list[dict]) -> list[dict]:
         # NER: named entity phrases
         for ent in doc.ents:
             term = ent.text.strip()
-            if len(term) >= 3 and term.lower() not in _STOP_SINGLE:
+            if term.lower() not in _STOP_SINGLE and _is_valid_term(term):
                 candidates.append(_make_candidate(term, "phrase", para))
 
-        # AWL single-word matches
+        # AWL single-word matches — store lemma for cross-paper aggregation
         for token in doc:
             word = token.lemma_.lower()
-            if word in _AWL and word not in _STOP_SINGLE and len(word) >= 4:
-                candidates.append(_make_candidate(token.text, "word", para))
-
-        # RAKE multi-word keyphrases
-        _rake.extract_keywords_from_text(text)
-        for phrase in _rake.get_ranked_phrases()[:5]:
-            if 2 <= len(phrase.split()) <= 5:
-                candidates.append(_make_candidate(phrase, "phrase", para))
+            if word in _AWL and word not in _STOP_SINGLE and _is_valid_term(word):
+                candidates.append(_make_candidate(word, "word", para))
 
         # Definition / contribution sentences
         sentences = [s.text.strip() for s in doc.sents]

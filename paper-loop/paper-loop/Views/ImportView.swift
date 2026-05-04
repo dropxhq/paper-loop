@@ -12,8 +12,12 @@ private enum ImportState {
 
 struct ImportView: View {
     @Environment(\.modelContext) private var modelContext
+    @Query private var allPapers: [Paper]
     @State private var urlText = ""
     @State private var importState: ImportState = .idle
+    @State private var showDupDialog = false
+    @State private var existingPaperForDup: Paper? = nil
+    @State private var navigateToPaperDetail: Paper? = nil
     @Binding var selectedTab: Int
 
     var body: some View {
@@ -83,6 +87,32 @@ struct ImportView: View {
         }
         .navigationTitle("导入")
         .navigationBarTitleDisplayMode(.inline)
+        .navigationDestination(item: $navigateToPaperDetail) { paper in
+            PaperDetailView(paper: paper)
+        }
+        .confirmationDialog(
+            "该论文已导入过",
+            isPresented: $showDupDialog,
+            titleVisibility: .visible
+        ) {
+            Button("查看已有词卡") {
+                navigateToPaperDetail = existingPaperForDup
+            }
+            Button("合并（追加新词卡）") {
+                guard let existing = existingPaperForDup else { return }
+                performImport(mergeInto: existing)
+            }
+            Button("替换（重新生成）", role: .destructive) {
+                guard let existing = existingPaperForDup else { return }
+                modelContext.delete(existing)
+                performImport(mergeInto: nil)
+            }
+            Button("取消", role: .cancel) {
+                existingPaperForDup = nil
+            }
+        } message: {
+            Text("你可以查看已有词卡、追加新词卡合并，或删除旧词卡重新生成。")
+        }
         } // NavigationStack
     }
 
@@ -143,20 +173,44 @@ struct ImportView: View {
         }
     }
 
+    // MARK: - ArXiv ID Extraction
+
+    private func extractArxivId(from url: String) -> String? {
+        // Matches patterns like arxiv.org/abs/2301.00001 or arxiv.org/pdf/2301.00001
+        let pattern = #"arxiv\.org/(?:abs|pdf)/([0-9]{4}\.[0-9]{4,5}(?:v\d+)?)"#
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) else { return nil }
+        let range = NSRange(url.startIndex..., in: url)
+        guard let match = regex.firstMatch(in: url, range: range),
+              let idRange = Range(match.range(at: 1), in: url) else { return nil }
+        return String(url[idRange])
+    }
+
     private func startImport() {
+        let url = urlText.trimmingCharacters(in: .whitespaces)
+        // Check for duplicate arxivId before importing
+        if let arxivId = extractArxivId(from: url),
+           let existing = allPapers.first(where: { $0.arxivId == arxivId }) {
+            existingPaperForDup = existing
+            showDupDialog = true
+            return
+        }
+        performImport(mergeInto: nil)
+    }
+
+    private func performImport(mergeInto existingPaper: Paper?) {
         let url = urlText.trimmingCharacters(in: .whitespaces)
         importState = .parsing
         Task {
             do {
                 let jobId = try await ImportService.shared.startImport(url: url)
-                try await pollProgress(jobId: jobId)
+                try await pollProgress(jobId: jobId, mergeInto: existingPaper)
             } catch {
                 importState = .failed(error.localizedDescription)
             }
         }
     }
 
-    private func pollProgress(jobId: String) async throws {
+    private func pollProgress(jobId: String, mergeInto existingPaper: Paper?) async throws {
         let deadline = Date().addingTimeInterval(300)
         while Date() < deadline {
             let status = try await ImportService.shared.pollStatus(jobId: jobId)
@@ -172,7 +226,7 @@ struct ImportView: View {
                     importState = .failed("服务器返回数据异常")
                     return
                 }
-                await saveAndNavigate(paperResponse: paper, cardResponses: cards)
+                await saveAndNavigate(paperResponse: paper, cardResponses: cards, mergeInto: existingPaper)
                 return
             case "error":
                 importState = .failed(status.error ?? "导入失败")
@@ -186,17 +240,31 @@ struct ImportView: View {
     }
 
     @MainActor
-    private func saveAndNavigate(paperResponse: PaperResponse, cardResponses: [CardResponse]) {
-        let paper = Paper(
-            arxivId: paperResponse.arxivId,
-            title: paperResponse.title,
-            abstract: paperResponse.abstract,
-            htmlURL: paperResponse.htmlURL.flatMap { URL(string: $0) },
-            pdfURL: URL(string: paperResponse.pdfURL)!
-        )
-        modelContext.insert(paper)
+    private func saveAndNavigate(paperResponse: PaperResponse, cardResponses: [CardResponse], mergeInto existingPaper: Paper?) {
+        let paper: Paper
+        if let existing = existingPaper {
+            // Merge mode: reuse existing Paper record
+            paper = existing
+        } else {
+            paper = Paper(
+                arxivId: paperResponse.arxivId,
+                title: paperResponse.title,
+                abstract: paperResponse.abstract,
+                htmlURL: paperResponse.htmlURL.flatMap { URL(string: $0) },
+                pdfURL: URL(string: paperResponse.pdfURL)!
+            )
+            modelContext.insert(paper)
+        }
+
+        // Existing terms for dedup in merge mode
+        let existingTerms = existingPaper.map { p in
+            Set(p.cards.map { $0.term.lowercased() })
+        } ?? []
 
         for cr in cardResponses {
+            // Skip terms already present when merging
+            if existingTerms.contains(cr.term.lowercased()) { continue }
+
             let cardType = CardType(rawValue: cr.type) ?? .word
             let anchor: AnchorData? = cr.anchor.flatMap { ar in
                 if ar.type == "html", let eid = ar.elementId, let hu = ar.htmlURL ?? paperResponse.htmlURL, let url = URL(string: hu) {

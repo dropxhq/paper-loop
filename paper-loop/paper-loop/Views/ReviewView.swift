@@ -16,8 +16,42 @@ struct ReviewView: View {
     @State private var showAnswer = false
     @State private var flipDegrees = 0.0
     @State private var navigateToSource: Card?
+    @AppStorage("ttsVoiceBannerDismissed") private var ttsVoiceBannerDismissed = false
+    @AppStorage("dashscopeTTSApiKey") private var dashScopeApiKey = ""
+    @AppStorage("dashscopeTTSSpeaker") private var dashScopeSpeaker = DashScopeVoiceType.defaultSpeaker
+    @State private var isSpeaking = false
 
     private let synthesizer = AVSpeechSynthesizer()
+    private let bestVoice: AVSpeechSynthesisVoice? = ReviewView.bestEnglishVoice()
+
+    /// Whether the best available voice is only compact/default quality
+    private var voiceIsLowQuality: Bool {
+        guard let voice = bestVoice else { return true }
+        if #available(iOS 17, *) {
+            return voice.quality == .default
+        }
+        return voice.quality == .default
+    }
+
+    // MARK: - TTS Voice Selection
+
+    private static func bestEnglishVoice() -> AVSpeechSynthesisVoice? {
+        let voices = AVSpeechSynthesisVoice.speechVoices()
+            .filter { $0.language.hasPrefix("en-") }
+        if #available(iOS 16, *) {
+            if let premium = voices.first(where: { $0.quality == .premium }) { return premium }
+            if let enhanced = voices.first(where: { $0.quality == .enhanced }) { return enhanced }
+        }
+        return AVSpeechSynthesisVoice(language: "en-US")
+    }
+
+    private var resolvedDashScopeApiKey: String {
+        if !dashScopeApiKey.isEmpty { return dashScopeApiKey }
+        if let legacyKey = UserDefaults.standard.string(forKey: "doubaoTTSApiKey"), !legacyKey.isEmpty {
+            return legacyKey
+        }
+        return ProcessInfo.processInfo.environment["DASHSCOPE_API_KEY"] ?? ""
+    }
 
     var body: some View {
         NavigationStack {
@@ -113,10 +147,23 @@ struct ReviewView: View {
                     .overlay(RoundedRectangle(cornerRadius: Theme.r16).stroke(Theme.line, lineWidth: 1))
             }
             HStack(spacing: 8) {
-                Button(card.type == .sentence ? "播放整句" : "播放发音") {
+                Button {
                     speak(card.type == .sentence ? card.sourceSentence : card.term)
+                } label: {
+                    HStack(spacing: 6) {
+                        if isSpeaking {
+                            ProgressView()
+                                .controlSize(.small)
+                        }
+                        Text(isSpeaking ? "加载中..." : (card.type == .sentence ? "播放整句" : "播放发音"))
+                    }
                 }
                 .buttonStyle(ChipButtonStyle())
+                .disabled(isSpeaking)
+            }
+            let dashScopeEnabled = !resolvedDashScopeApiKey.isEmpty
+            if !dashScopeEnabled && voiceIsLowQuality && !ttsVoiceBannerDismissed {
+                ttsQualityBanner
             }
         }
         .padding(20)
@@ -164,10 +211,19 @@ struct ReviewView: View {
                 }
                 .buttonStyle(ChipButtonStyle(filled: true))
 
-                Button("播放发音") {
+                Button {
                     speak(card.term)
+                } label: {
+                    HStack(spacing: 6) {
+                        if isSpeaking {
+                            ProgressView()
+                                .controlSize(.small)
+                        }
+                        Text(isSpeaking ? "加载中..." : "播放发音")
+                    }
                 }
                 .buttonStyle(ChipButtonStyle())
+                .disabled(isSpeaking)
             }
         }
         .padding(20)
@@ -221,10 +277,65 @@ struct ReviewView: View {
     }
 
     private func speak(_ text: String) {
+        if !resolvedDashScopeApiKey.isEmpty {
+            isSpeaking = true
+            Task {
+                do {
+                    try await DashScopeTTSService.shared.speak(
+                        text: text,
+                        apiKey: resolvedDashScopeApiKey,
+                        speaker: dashScopeSpeaker
+                    )
+                } catch {
+                    // DashScope 失败时降级到系统 TTS
+                    await MainActor.run { speakWithSystem(text) }
+                }
+                await MainActor.run { isSpeaking = false }
+            }
+        } else {
+            speakWithSystem(text)
+        }
+    }
+
+    private func speakWithSystem(_ text: String) {
         let utterance = AVSpeechUtterance(string: text)
-        utterance.voice = AVSpeechSynthesisVoice(language: "en-US")
+        utterance.voice = bestVoice
         synthesizer.speak(utterance)
     }
+
+    // MARK: - TTS Quality Banner
+
+    private var ttsQualityBanner: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "speaker.wave.2")
+                .font(.system(size: 12))
+                .foregroundStyle(Theme.textMuted)
+            Text("下载增强版语音可改善发音效果")
+                .font(.system(size: 12))
+                .foregroundStyle(Theme.textMuted)
+            Spacer()
+            Button("设置") {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            }
+            .font(.system(size: 12, weight: .medium))
+            .foregroundStyle(Theme.primary)
+            Button {
+                ttsVoiceBannerDismissed = true
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 11))
+                    .foregroundStyle(Theme.textMuted)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(Theme.surface2)
+        .clipShape(RoundedRectangle(cornerRadius: Theme.r16))
+    }
+
+    // MARK: - Card Type Label
 
     private func cardTypeLabel(_ type: CardType) -> some View {
         let (label, color): (String, Color) = switch type {
