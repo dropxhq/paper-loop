@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		50E262D82FA917A10099F81A /* SwiftSoup in Frameworks */ = {isa = PBXBuildFile; productRef = 50A1B2C42FA0BCDE009F09CD /* SwiftSoup */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		50E939C82F9FBED9009F09CD /* paper-loop.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "paper-loop.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -36,6 +40,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				50E262D82FA917A10099F81A /* SwiftSoup in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -78,6 +83,7 @@
 			);
 			name = "paper-loop";
 			packageProductDependencies = (
+				50A1B2C42FA0BCDE009F09CD /* SwiftSoup */,
 			);
 			productName = "paper-loop";
 			productReference = 50E939C82F9FBED9009F09CD /* paper-loop.app */;
@@ -107,6 +113,9 @@
 			);
 			mainGroup = 50E939BF2F9FBED9009F09CD;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				50B397FF2FA91CFD005F9805 /* XCRemoteSwiftPackageReference "SwiftSoup" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 50E939C92F9FBED9009F09CD /* Products */;
 			projectDirPath = "";
@@ -368,6 +377,33 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		50A1B2C32FA0BCDE009F09CD /* XCRemoteSwiftPackageReference "SwiftSoup" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/scinfu/SwiftSoup.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.7.0;
+			};
+		};
+		50B397FF2FA91CFD005F9805 /* XCRemoteSwiftPackageReference "SwiftSoup" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/scinfu/SwiftSoup";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.13.4;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		50A1B2C42FA0BCDE009F09CD /* SwiftSoup */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 50A1B2C32FA0BCDE009F09CD /* XCRemoteSwiftPackageReference "SwiftSoup" */;
+			productName = SwiftSoup;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 50E939C02F9FBED9009F09CD /* Project object */;
 }

@@ -1,55 +1,23 @@
 import Foundation
 
-struct PaperResponse: Decodable {
+struct ImportResult {
+    let meta: PaperMeta
     let arxivId: String
-    let title: String
-    let abstract: String
-    let htmlURL: String?
-    let pdfURL: String
-}
-
-struct AnchorResponse: Decodable {
-    let type: String
-    let elementId: String?
-    let htmlURL: String?
-    let page: Int?
-    let bbox: [Double]?
-}
-
-struct CardResponse: Decodable {
-    let term: String
-    let type: String
-    let sourceSentence: String
-    let contextBefore: String
-    let contextAfter: String
-    let zhHint: String
-    let valueScore: Int
-    let anchor: AnchorResponse?
-    let occurrenceCount: Int
-}
-
-struct ImportStatusResponse: Decodable {
-    let status: String
-    let paper: PaperResponse?
-    let cards: [CardResponse]?
-    let error: String?
-}
-
-struct StartImportResponse: Decodable {
-    let jobId: String
-    let status: String
+    let htmlURL: URL?
+    let pdfURL: URL
+    let cards: [CardData]
 }
 
 enum ImportError: Error, LocalizedError {
     case invalidURL
-    case serverError(String)
-    case timeout
+    case noContent
+    case importFailed(String)
 
     var errorDescription: String? {
         switch self {
         case .invalidURL: return "仅支持 arXiv 链接"
-        case .serverError(let msg): return msg
-        case .timeout: return "导入超时，请重试"
+        case .noContent: return "无法获取论文内容"
+        case .importFailed(let msg): return msg
         }
     }
 }
@@ -57,42 +25,49 @@ enum ImportError: Error, LocalizedError {
 actor ImportService {
     static let shared = ImportService()
 
-    private let baseURL = "http://localhost:8000"
-    private let session = URLSession.shared
-
-    func startImport(url: String) async throws -> String {
-        let endpoint = URL(string: "\(baseURL)/import")!
-        var request = URLRequest(url: endpoint)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONEncoder().encode(["url": url])
-
-        let (data, response) = try await session.data(for: request)
-        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
-            let detail = (try? JSONDecoder().decode([String: String].self, from: data))?["detail"] ?? "未知错误"
-            throw ImportError.serverError(detail)
+    func startImport(url: String) async throws -> ImportResult {
+        guard let arxivId = extractArxivId(from: url) else {
+            throw ImportError.invalidURL
         }
-        let result = try JSONDecoder().decode(StartImportResponse.self, from: data)
-        return result.jobId
+
+        // Check API Key early
+        guard let key = KeychainHelper.read(key: "llm_api_key"), !key.isEmpty else {
+            throw LLMError.missingAPIKey
+        }
+
+        // 1. Fetch metadata (non-fatal if fails)
+        let meta: PaperMeta
+        do {
+            meta = try await ArXivFetchService.shared.fetchMetadata(arxivId: arxivId)
+        } catch {
+            meta = PaperMeta(title: arxivId, abstract: "")
+        }
+
+        // 2. Fetch paragraphs (HTML preferred, PDF fallback)
+        let paragraphs = try await ArXivFetchService.shared.fetchParagraphs(arxivId: arxivId)
+
+        let htmlURL = URL(string: "https://arxiv.org/html/\(arxivId)")
+        let pdfURL = URL(string: "https://arxiv.org/pdf/\(arxivId)")!
+
+        // 3. Generate cards via LLM
+        let paperContext = "\(meta.title). \(meta.abstract.prefix(200))"
+        let cards = try await CardPipeline.shared.generateCards(paragraphs: paragraphs, paperContext: String(paperContext))
+
+        return ImportResult(
+            meta: meta,
+            arxivId: arxivId,
+            htmlURL: htmlURL,
+            pdfURL: pdfURL,
+            cards: cards
+        )
     }
 
-    func pollStatus(jobId: String) async throws -> ImportStatusResponse {
-        let endpoint = URL(string: "\(baseURL)/import/\(jobId)")!
-        let (data, _) = try await session.data(from: endpoint)
-        return try JSONDecoder().decode(ImportStatusResponse.self, from: data)
-    }
-
-    func waitForCompletion(jobId: String, timeout: TimeInterval = 300) async throws -> ImportStatusResponse {
-        let deadline = Date().addingTimeInterval(timeout)
-        while Date() < deadline {
-            let status = try await pollStatus(jobId: jobId)
-            switch status.status {
-            case "done": return status
-            case "error": throw ImportError.serverError(status.error ?? "导入失败")
-            default:
-                try await Task.sleep(nanoseconds: 1_500_000_000)
-            }
-        }
-        throw ImportError.timeout
+    private func extractArxivId(from url: String) -> String? {
+        let pattern = #"arxiv\.org/(?:abs|pdf)/([0-9]{4}\.[0-9]{4,5}(?:v\d+)?)"#
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) else { return nil }
+        let range = NSRange(url.startIndex..., in: url)
+        guard let match = regex.firstMatch(in: url, range: range),
+              let idRange = Range(match.range(at: 1), in: url) else { return nil }
+        return String(url[idRange])
     }
 }

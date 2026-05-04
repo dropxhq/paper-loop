@@ -202,91 +202,50 @@ struct ImportView: View {
         importState = .parsing
         Task {
             do {
-                let jobId = try await ImportService.shared.startImport(url: url)
-                try await pollProgress(jobId: jobId, mergeInto: existingPaper)
+                importState = .parsing
+                let result = try await ImportService.shared.startImport(url: url)
+                importState = .generatingCards
+                await saveAndNavigate(result: result, mergeInto: existingPaper)
+            } catch LLMError.missingAPIKey {
+                importState = .failed("请先在「我的」中设置 API Key")
             } catch {
                 importState = .failed(error.localizedDescription)
             }
         }
     }
 
-    private func pollProgress(jobId: String, mergeInto existingPaper: Paper?) async throws {
-        let deadline = Date().addingTimeInterval(300)
-        while Date() < deadline {
-            let status = try await ImportService.shared.pollStatus(jobId: jobId)
-            switch status.status {
-            case "parsing":
-                importState = .parsing
-            case "parsing_pdf":
-                importState = .parsingPDF
-            case "generating_cards":
-                importState = .generatingCards
-            case "done":
-                guard let paper = status.paper, let cards = status.cards else {
-                    importState = .failed("服务器返回数据异常")
-                    return
-                }
-                await saveAndNavigate(paperResponse: paper, cardResponses: cards, mergeInto: existingPaper)
-                return
-            case "error":
-                importState = .failed(status.error ?? "导入失败")
-                return
-            default:
-                break
-            }
-            try await Task.sleep(nanoseconds: 1_500_000_000)
-        }
-        importState = .failed("导入超时，请重试")
-    }
-
     @MainActor
-    private func saveAndNavigate(paperResponse: PaperResponse, cardResponses: [CardResponse], mergeInto existingPaper: Paper?) {
+    private func saveAndNavigate(result: ImportResult, mergeInto existingPaper: Paper?) {
         let paper: Paper
         if let existing = existingPaper {
-            // Merge mode: reuse existing Paper record
             paper = existing
         } else {
             paper = Paper(
-                arxivId: paperResponse.arxivId,
-                title: paperResponse.title,
-                abstract: paperResponse.abstract,
-                htmlURL: paperResponse.htmlURL.flatMap { URL(string: $0) },
-                pdfURL: URL(string: paperResponse.pdfURL)!
+                arxivId: result.arxivId,
+                title: result.meta.title,
+                abstract: result.meta.abstract,
+                htmlURL: result.htmlURL,
+                pdfURL: result.pdfURL
             )
             modelContext.insert(paper)
         }
 
-        // Existing terms for dedup in merge mode
         let existingTerms = existingPaper.map { p in
             Set(p.cards.map { $0.term.lowercased() })
         } ?? []
 
-        for cr in cardResponses {
-            // Skip terms already present when merging
-            if existingTerms.contains(cr.term.lowercased()) { continue }
+        for cd in result.cards {
+            if existingTerms.contains(cd.term.lowercased()) { continue }
 
-            let cardType = CardType(rawValue: cr.type) ?? .word
-            let anchor: AnchorData? = cr.anchor.flatMap { ar in
-                if ar.type == "html", let eid = ar.elementId, let hu = ar.htmlURL ?? paperResponse.htmlURL, let url = URL(string: hu) {
-                    return .html(elementId: eid, htmlURL: url)
-                } else if ar.type == "pdf", let page = ar.page {
-                    let bbox = ar.bbox.map { coords in
-                        CGRect(x: coords[0], y: coords[1], width: coords[2] - coords[0], height: coords[3] - coords[1])
-                    } ?? .zero
-                    return .pdf(page: page, bbox: bbox)
-                }
-                return nil
-            }
+            let cardType = CardType(rawValue: cd.type) ?? .word
+            let anchor: AnchorData? = buildAnchor(from: cd, htmlURL: result.htmlURL)
             let card = Card(
-                term: cr.term,
+                term: cd.term,
                 type: cardType,
-                sourceSentence: cr.sourceSentence,
-                contextBefore: cr.contextBefore,
-                contextAfter: cr.contextAfter,
-                zhHint: cr.zhHint,
-                valueScore: cr.valueScore,
+                sourceSentence: cd.sourceSentence,
+                zhHint: cd.zhHint,
+                valueScore: cd.valueScore,
                 anchor: anchor,
-                occurrenceCount: cr.occurrenceCount,
                 paper: paper
             )
             modelContext.insert(card)
@@ -294,6 +253,21 @@ struct ImportView: View {
 
         importState = .done
         selectedTab = 1
+    }
+
+    private func buildAnchor(from cd: CardData, htmlURL: URL?) -> AnchorData? {
+        if cd.anchor.hasPrefix("element:") {
+            let elementId = String(cd.anchor.dropFirst("element:".count))
+            if let url = htmlURL {
+                return .html(elementId: elementId, htmlURL: url)
+            }
+        } else if cd.anchor.hasPrefix("page:") {
+            let pageStr = String(cd.anchor.dropFirst("page:".count))
+            if let page = Int(pageStr) {
+                return .pdf(page: page, bbox: .zero)
+            }
+        }
+        return nil
     }
 }
 

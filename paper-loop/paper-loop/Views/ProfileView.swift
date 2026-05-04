@@ -8,6 +8,22 @@ struct ProfileView: View {
     @Query private var reviewLogs: [ReviewLog]
 
     @State private var showTTSSettings = false
+    @State private var llmAPIKeyInput = ""
+    @State private var llmBaseURLInput = ""
+    @State private var llmModelInput = ""
+    @State private var showAPIKeySaved = false
+    @AppStorage("llm_base_url") private var savedBaseURL = ""
+    @AppStorage("llm_model") private var savedModel = ""
+
+    private var maskedKey: String {
+        guard let key = KeychainHelper.read(key: "llm_api_key"), !key.isEmpty else {
+            return ""
+        }
+        if key.count <= 8 { return String(repeating: "•", count: key.count) }
+        let prefix = key.prefix(5)
+        let suffix = key.suffix(4)
+        return "\(prefix)•••\(suffix)"
+    }
 
     private var todayReviews: Int {
         let calendar = Calendar.current
@@ -88,6 +104,87 @@ struct ProfileView: View {
                             TTSSettingsSheet()
                         }
 
+                        // AI Settings card
+                        VStack(spacing: 0) {
+                            SectionHeader("AI 设置")
+                                .padding(.bottom, 10)
+
+                            // API Key field
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("LLM API Key")
+                                    .font(.system(size: 13, weight: .medium))
+                                    .foregroundStyle(Theme.textMuted)
+                                SecureField("输入 API Key", text: $llmAPIKeyInput)
+                                    .font(.system(size: 14))
+                                    .foregroundStyle(Theme.textPrimary)
+                                    .padding(.horizontal, 12)
+                                    .frame(minHeight: 42)
+                                    .background(Theme.surface2)
+                                    .clipShape(RoundedRectangle(cornerRadius: Theme.r16))
+                                    .overlay(RoundedRectangle(cornerRadius: Theme.r16).stroke(Theme.line, lineWidth: 1))
+                                if !maskedKey.isEmpty {
+                                    Text("当前：\(maskedKey)")
+                                        .font(.system(size: 12))
+                                        .foregroundStyle(Theme.textMuted)
+                                }
+                                Text("DashScope 用户：语音朗读与卡片生成可使用同一 Key")
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(Theme.textMuted)
+                                    .lineSpacing(3)
+                            }
+                            .padding(.bottom, 10)
+
+                            // Base URL field
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("Base URL（留空使用默认）")
+                                    .font(.system(size: 13, weight: .medium))
+                                    .foregroundStyle(Theme.textMuted)
+                                TextField("https://dashscope.aliyuncs.com/compatible-mode/v1", text: $llmBaseURLInput)
+                                    .font(.system(size: 13))
+                                    .foregroundStyle(Theme.textPrimary)
+                                    .autocorrectionDisabled()
+                                    .textInputAutocapitalization(.never)
+                                    .keyboardType(.URL)
+                                    .padding(.horizontal, 12)
+                                    .frame(minHeight: 42)
+                                    .background(Theme.surface2)
+                                    .clipShape(RoundedRectangle(cornerRadius: Theme.r16))
+                                    .overlay(RoundedRectangle(cornerRadius: Theme.r16).stroke(Theme.line, lineWidth: 1))
+                            }
+                            .padding(.bottom, 10)
+
+                            // Model field
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("模型（留空使用默认 deepseek-v4-flash）")
+                                    .font(.system(size: 13, weight: .medium))
+                                    .foregroundStyle(Theme.textMuted)
+                                TextField("deepseek-v4-flash", text: $llmModelInput)
+                                    .font(.system(size: 13))
+                                    .foregroundStyle(Theme.textPrimary)
+                                    .autocorrectionDisabled()
+                                    .textInputAutocapitalization(.never)
+                                    .padding(.horizontal, 12)
+                                    .frame(minHeight: 42)
+                                    .background(Theme.surface2)
+                                    .clipShape(RoundedRectangle(cornerRadius: Theme.r16))
+                                    .overlay(RoundedRectangle(cornerRadius: Theme.r16).stroke(Theme.line, lineWidth: 1))
+                            }
+                            .padding(.bottom, 10)
+
+                            Button {
+                                saveAISettings()
+                            } label: {
+                                Text(showAPIKeySaved ? "已保存 ✓" : "保存设置")
+                            }
+                            .buttonStyle(PrimaryButtonStyle())
+                        }
+                        .padding(14)
+                        .paperCardStyle()
+                        .onAppear {
+                            llmBaseURLInput = savedBaseURL
+                            llmModelInput = savedModel
+                        }
+
                         // Settings card
                         VStack(spacing: 0) {
                             SectionHeader("设置")
@@ -106,6 +203,20 @@ struct ProfileView: View {
             }
             .navigationTitle("我的")
             .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+
+    private func saveAISettings() {
+        if !llmAPIKeyInput.isEmpty {
+            KeychainHelper.save(key: "llm_api_key", value: llmAPIKeyInput)
+            llmAPIKeyInput = ""
+        }
+        savedBaseURL = llmBaseURLInput
+        savedModel = llmModelInput
+        showAPIKeySaved = true
+        Task {
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            showAPIKeySaved = false
         }
     }
 
