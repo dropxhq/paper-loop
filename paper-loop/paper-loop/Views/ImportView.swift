@@ -15,6 +15,7 @@ struct ImportView: View {
     @Query private var allPapers: [Paper]
     @State private var urlText = ""
     @State private var importState: ImportState = .idle
+    @State private var importProgress: Double = 0
     @State private var showDupDialog = false
     @State private var existingPaperForDup: Paper? = nil
     @State private var navigateToPaperDetail: Paper? = nil
@@ -121,12 +122,25 @@ struct ImportView: View {
         switch importState {
         case .idle:
             EmptyView()
-        case .parsing:
-            progressRow(icon: "doc.text.magnifyingglass", text: "解析论文内容中…")
-        case .parsingPDF:
-            progressRow(icon: "doc.richtext", text: "使用 PDF 解析中…")
-        case .generatingCards:
-            progressRow(icon: "sparkles", text: "生成卡片中…")
+        case .parsing, .parsingPDF, .generatingCards:
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 6) {
+                    ProgressView()
+                        .tint(Theme.primary)
+                        .scaleEffect(0.8)
+                    Text(stageLabel)
+                        .foregroundStyle(Theme.textMuted)
+                        .font(.system(size: 14))
+                    Spacer()
+                    Text("\(Int(importProgress * 100))%")
+                        .foregroundStyle(Theme.primary)
+                        .font(.system(size: 12, weight: .medium).monospacedDigit())
+                }
+                ProgressView(value: importProgress)
+                    .tint(Theme.primary)
+                    .animation(.easeInOut(duration: 0.4), value: importProgress)
+            }
+            .padding(.top, 4)
         case .done:
             HStack(spacing: 6) {
                 Image(systemName: "checkmark.circle.fill")
@@ -149,17 +163,13 @@ struct ImportView: View {
         }
     }
 
-    private func progressRow(icon: String, text: String) -> some View {
-        HStack(spacing: 8) {
-            ProgressView()
-                .tint(Theme.primary)
-            Image(systemName: icon)
-                .foregroundStyle(Theme.textMuted)
-            Text(text)
-                .foregroundStyle(Theme.textMuted)
-                .font(.system(size: 14))
+    private var stageLabel: String {
+        switch importState {
+        case .parsing: return "解析论文内容中…"
+        case .parsingPDF: return "使用 PDF 解析中…"
+        case .generatingCards: return "生成卡片中…"
+        default: return ""
         }
-        .padding(.top, 4)
     }
 
     private var canImport: Bool {
@@ -200,11 +210,17 @@ struct ImportView: View {
     private func performImport(mergeInto existingPaper: Paper?) {
         let url = urlText.trimmingCharacters(in: .whitespaces)
         importState = .parsing
+        importProgress = 0
         Task {
             do {
-                importState = .parsing
-                let result = try await ImportService.shared.startImport(url: url)
-                importState = .generatingCards
+                let result = try await ImportService.shared.startImport(url: url) { progress in
+                    Task { @MainActor in
+                        importProgress = progress
+                        if progress > 0.20 {
+                            importState = .generatingCards
+                        }
+                    }
+                }
                 await saveAndNavigate(result: result, mergeInto: existingPaper)
             } catch LLMError.missingAPIKey {
                 importState = .failed("请先在「我的」中设置 API Key")

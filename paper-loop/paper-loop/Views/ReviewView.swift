@@ -17,9 +17,9 @@ struct ReviewView: View {
     @State private var flipDegrees = 0.0
     @State private var navigateToSource: Card?
     @AppStorage("ttsVoiceBannerDismissed") private var ttsVoiceBannerDismissed = false
-    @AppStorage("dashscopeTTSApiKey") private var dashScopeApiKey = ""
     @AppStorage("dashscopeTTSSpeaker") private var dashScopeSpeaker = DashScopeVoiceType.defaultSpeaker
     @State private var isSpeaking = false
+    @State private var showTTSSettings = false
 
     private let synthesizer = AVSpeechSynthesizer()
     private let bestVoice: AVSpeechSynthesisVoice? = ReviewView.bestEnglishVoice()
@@ -46,10 +46,9 @@ struct ReviewView: View {
     }
 
     private var resolvedDashScopeApiKey: String {
-        if !dashScopeApiKey.isEmpty { return dashScopeApiKey }
-        if let legacyKey = UserDefaults.standard.string(forKey: "doubaoTTSApiKey"), !legacyKey.isEmpty {
-            return legacyKey
-        }
+        if let keychainKey = KeychainHelper.read(key: "tts_api_key"), !keychainKey.isEmpty { return keychainKey }
+        if let legacyAppStorage = UserDefaults.standard.string(forKey: "dashscopeTTSApiKey"), !legacyAppStorage.isEmpty { return legacyAppStorage }
+        if let legacyKey = UserDefaults.standard.string(forKey: "doubaoTTSApiKey"), !legacyKey.isEmpty { return legacyKey }
         return ProcessInfo.processInfo.environment["DASHSCOPE_API_KEY"] ?? ""
     }
 
@@ -69,6 +68,9 @@ struct ReviewView: View {
             .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(item: $navigateToSource) { card in
                 SourceDetailView(card: card)
+            }
+            .sheet(isPresented: $showTTSSettings) {
+                TTSSettingsSheet()
             }
         }
     }
@@ -310,14 +312,12 @@ struct ReviewView: View {
             Image(systemName: "speaker.wave.2")
                 .font(.system(size: 12))
                 .foregroundStyle(Theme.textMuted)
-            Text("下载增强版语音可改善发音效果")
+            Text("配置 DashScope TTS Key 可获得更自然的发音")
                 .font(.system(size: 12))
                 .foregroundStyle(Theme.textMuted)
             Spacer()
-            Button("设置") {
-                if let url = URL(string: UIApplication.openSettingsURLString) {
-                    UIApplication.shared.open(url)
-                }
+            Button("配置") {
+                showTTSSettings = true
             }
             .font(.system(size: 12, weight: .medium))
             .foregroundStyle(Theme.primary)

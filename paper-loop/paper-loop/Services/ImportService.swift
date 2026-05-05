@@ -25,7 +25,7 @@ enum ImportError: Error, LocalizedError {
 actor ImportService {
     static let shared = ImportService()
 
-    func startImport(url: String) async throws -> ImportResult {
+    func startImport(url: String, onProgress: (@Sendable (Double) -> Void)? = nil) async throws -> ImportResult {
         guard let arxivId = extractArxivId(from: url) else {
             throw ImportError.invalidURL
         }
@@ -35,23 +35,31 @@ actor ImportService {
             throw LLMError.missingAPIKey
         }
 
-        // 1. Fetch metadata (non-fatal if fails)
+        // 1. Fetch metadata (→ 5%)
         let meta: PaperMeta
         do {
             meta = try await ArXivFetchService.shared.fetchMetadata(arxivId: arxivId)
         } catch {
             meta = PaperMeta(title: arxivId, abstract: "")
         }
+        onProgress?(0.05)
 
-        // 2. Fetch paragraphs (HTML preferred, PDF fallback)
+        // 2. Fetch paragraphs (→ 20%)
         let paragraphs = try await ArXivFetchService.shared.fetchParagraphs(arxivId: arxivId)
+        onProgress?(0.20)
 
         let htmlURL = URL(string: "https://arxiv.org/html/\(arxivId)")
         let pdfURL = URL(string: "https://arxiv.org/pdf/\(arxivId)")!
 
-        // 3. Generate cards via LLM
+        // 3. Generate cards via LLM (20% → 100%)
         let paperContext = "\(meta.title). \(meta.abstract.prefix(200))"
-        let cards = try await CardPipeline.shared.generateCards(paragraphs: paragraphs, paperContext: String(paperContext))
+        let cards = try await CardPipeline.shared.generateCards(
+            paragraphs: paragraphs,
+            paperContext: String(paperContext),
+            onProgress: { fraction in
+                onProgress?(0.20 + 0.80 * fraction)
+            }
+        )
 
         return ImportResult(
             meta: meta,

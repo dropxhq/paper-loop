@@ -39,7 +39,12 @@ private struct ChatResponse: Decodable {
 actor LLMService {
     static let shared = LLMService()
 
-    private let session = URLSession.shared
+    private let session: URLSession = {
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 180
+        config.timeoutIntervalForResource = 300
+        return URLSession(configuration: config)
+    }()
 
     private var baseURL: String {
         UserDefaults.standard.string(forKey: "llm_base_url")

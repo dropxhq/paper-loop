@@ -95,6 +95,7 @@ struct ProfileView: View {
                                 showTTSSettings = true
                             } label: {
                                 TTSConfigRow()
+                                    .id(showTTSSettings)
                             }
                             .buttonStyle(.plain)
                         }
@@ -280,9 +281,7 @@ private struct PaperRowView: View {
 // MARK: - TTS Config Row
 
 private struct TTSConfigRow: View {
-    @AppStorage("dashscopeTTSApiKey") private var apiKey = ""
-
-    private var isConfigured: Bool { !apiKey.isEmpty }
+    @State private var isConfigured = false
 
     var body: some View {
         HStack {
@@ -309,13 +308,15 @@ private struct TTSConfigRow: View {
         .clipShape(RoundedRectangle(cornerRadius: Theme.r18))
         .overlay(RoundedRectangle(cornerRadius: Theme.r18).stroke(Theme.line, lineWidth: 1))
         .padding(.top, 4)
+        .onAppear {
+            isConfigured = (KeychainHelper.read(key: "tts_api_key").map { !$0.isEmpty } ?? false)
+        }
     }
 }
 
 // MARK: - TTS Settings Sheet
 
 struct TTSSettingsSheet: View {
-    @AppStorage("dashscopeTTSApiKey") private var apiKey = ""
     @AppStorage("dashscopeTTSSpeaker") private var speaker = DashScopeVoiceType.defaultSpeaker
 
     @Environment(\.dismiss) private var dismiss
@@ -424,8 +425,10 @@ struct TTSSettingsSheet: View {
                 }
             }
             .onAppear {
-                if !apiKey.isEmpty {
-                    draftApiKey = apiKey
+                if let keychainKey = KeychainHelper.read(key: "tts_api_key"), !keychainKey.isEmpty {
+                    draftApiKey = keychainKey
+                } else if let legacyAppStorage = UserDefaults.standard.string(forKey: "dashscopeTTSApiKey"), !legacyAppStorage.isEmpty {
+                    draftApiKey = legacyAppStorage
                 } else if let legacyKey = UserDefaults.standard.string(forKey: "doubaoTTSApiKey"), !legacyKey.isEmpty {
                     draftApiKey = legacyKey
                 } else {
@@ -487,7 +490,7 @@ struct TTSSettingsSheet: View {
     // MARK: - Actions
 
     private func save() {
-        apiKey = draftApiKey.trimmingCharacters(in: .whitespaces)
+        KeychainHelper.save(key: "tts_api_key", value: draftApiKey.trimmingCharacters(in: .whitespaces))
         speaker = draftSpeaker
         dismiss()
     }

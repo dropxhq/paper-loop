@@ -57,8 +57,13 @@ actor CardPipeline {
     只输出 JSON 数组，不要有任何额外文字。
     """
 
-    func generateCards(paragraphs: [Paragraph], paperContext: String) async throws -> [CardData] {
+    func generateCards(
+        paragraphs: [Paragraph],
+        paperContext: String,
+        onProgress: (@Sendable (Double) -> Void)? = nil
+    ) async throws -> [CardData] {
         let batchOffsets = stride(from: 0, to: paragraphs.count, by: batchSize).map { $0 }
+        let totalBatches = max(batchOffsets.count, 1)
 
         return try await withThrowingTaskGroup(of: [CardData].self) { group in
             for batchOffset in batchOffsets {
@@ -70,8 +75,11 @@ actor CardPipeline {
             }
 
             var all: [CardData] = []
+            var completed = 0
             for try await batchResult in group {
                 all.append(contentsOf: batchResult)
+                completed += 1
+                onProgress?(Double(completed) / Double(totalBatches))
             }
             return all
         }
