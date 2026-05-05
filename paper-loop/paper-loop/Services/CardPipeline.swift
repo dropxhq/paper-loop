@@ -126,18 +126,14 @@ actor CardPipeline {
             guard globalIdx >= 0, globalIdx < allParagraphs.count else { return nil }
             let para = allParagraphs[globalIdx]
 
-            // Locate termInContext in paragraph text; discard if not found
-            guard let range = para.text.range(of: item.term_in_context, options: .caseInsensitive) else {
-                return nil
-            }
-
-            // Compute UTF-16 offset (compatible with NSString / JavaScript)
-            let nsRange = NSRange(range, in: para.text)
-            let charOffset = nsRange.location
+            // Locate termInContext in paragraph text with progressively looser matching
+            let (resolvedTerm, charOffset) = locateTerm(item.term_in_context, in: para.text)
+            // If we can't find any reasonable match, still keep the card but without an anchor offset
+            let finalTerm = resolvedTerm ?? item.term_in_context
 
             return CardData(
                 lemma: item.lemma,
-                termInContext: item.term_in_context,
+                termInContext: finalTerm,
                 type: item.type,
                 sourceSentence: item.source_sentence,
                 zhHint: item.zh_hint,
@@ -146,5 +142,39 @@ actor CardPipeline {
                 charOffset: charOffset
             )
         }
+    }
+
+    /// Try to find `term` in `text` with progressively looser strategies.
+    /// Returns (matched substring from text, UTF-16 offset), or (nil, nil) if not found.
+    private func locateTerm(_ term: String, in text: String) -> (String?, Int?) {
+        let options: String.CompareOptions = [.caseInsensitive]
+
+        // 1. Exact case-insensitive match
+        if let range = text.range(of: term, options: options) {
+            let matched = String(text[range])
+            return (matched, NSRange(range, in: text).location)
+        }
+
+        // 2. Trim whitespace / punctuation from both ends of the LLM term
+        let trimmed = term.trimmingCharacters(in: .whitespacesAndNewlines
+            .union(.punctuationCharacters))
+        if trimmed != term, !trimmed.isEmpty,
+           let range = text.range(of: trimmed, options: options) {
+            let matched = String(text[range])
+            return (matched, NSRange(range, in: text).location)
+        }
+
+        // 3. Collapse internal whitespace runs (LLM sometimes inserts extra spaces)
+        let normalized = trimmed
+            .components(separatedBy: .whitespaces)
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+        if normalized != trimmed, !normalized.isEmpty,
+           let range = text.range(of: normalized, options: options) {
+            let matched = String(text[range])
+            return (matched, NSRange(range, in: text).location)
+        }
+
+        return (nil, nil)
     }
 }
