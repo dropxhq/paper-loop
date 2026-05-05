@@ -8,10 +8,10 @@ enum ReviewRating: Int, CaseIterable {
 
     var label: String {
         switch self {
-        case .again: return "不认识"
-        case .hard: return "模糊"
-        case .good: return "认识"
-        case .easy: return "已掌握"
+        case .again: return String(localized: "不认识", comment: "Review rating again")
+        case .hard: return String(localized: "模糊", comment: "Review rating hard")
+        case .good: return String(localized: "认识", comment: "Review rating good")
+        case .easy: return String(localized: "已掌握", comment: "Review rating easy (note: same key as profile stat, handled by context)")
         }
     }
 }

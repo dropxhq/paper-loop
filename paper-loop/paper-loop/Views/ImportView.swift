@@ -165,9 +165,9 @@ struct ImportView: View {
 
     private var stageLabel: String {
         switch importState {
-        case .parsing: return "解析论文内容中…"
-        case .parsingPDF: return "使用 PDF 解析中…"
-        case .generatingCards: return "生成卡片中…"
+        case .parsing: return String(localized: "解析论文内容中…")
+        case .parsingPDF: return String(localized: "使用 PDF 解析中…")
+        case .generatingCards: return String(localized: "生成卡片中…")
         default: return ""
         }
     }

@@ -196,7 +196,7 @@ struct VocabRowView: View {
     }
 
     private var typeLabel: some View {
-        let (text, color): (String, Color) = switch card.type {
+        let (text, color): (LocalizedStringKey, Color) = switch card.type {
         case .word: ("词", Theme.primary)
         case .phrase: ("短语", Color(red: 0.8, green: 0.45, blue: 0.1))
         case .sentence: ("句", Color(red: 0.5, green: 0.3, blue: 0.7))

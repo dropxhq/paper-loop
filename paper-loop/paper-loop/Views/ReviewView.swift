@@ -338,7 +338,7 @@ struct ReviewView: View {
     // MARK: - Card Type Label
 
     private func cardTypeLabel(_ type: CardType) -> some View {
-        let (label, color): (String, Color) = switch type {
+        let (label, color): (LocalizedStringKey, Color) = switch type {
         case .word: ("单词", Theme.primary)
         case .phrase: ("术语", Color(red: 0.5, green: 0.3, blue: 0.7))
         case .sentence: ("例句", Color(red: 0.8, green: 0.45, blue: 0.1))
