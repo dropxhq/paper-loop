@@ -122,7 +122,7 @@ actor CardPipeline {
         return items.compactMap { item -> CardData? in
             guard item.keep, item.value > 2 else { return nil }
 
-            let globalIdx = batchOffset + item.paragraph_idx
+            let globalIdx = item.paragraph_idx
             guard globalIdx >= 0, globalIdx < allParagraphs.count else { return nil }
             let para = allParagraphs[globalIdx]
 

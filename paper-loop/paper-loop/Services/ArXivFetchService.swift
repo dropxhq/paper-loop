@@ -33,7 +33,7 @@ actor ArXivFetchService {
     // MARK: - Metadata (Atom XML)
 
     func fetchMetadata(arxivId: String) async throws -> PaperMeta {
-        let url = URL(string: "https://export.arxiv.org/abs/\(arxivId)")!
+        let url = URL(string: "https://export.arxiv.org/api/query?id_list=\(arxivId)")!
         var request = URLRequest(url: url, timeoutInterval: 15)
         request.setValue("application/xml", forHTTPHeaderField: "Accept")
 
