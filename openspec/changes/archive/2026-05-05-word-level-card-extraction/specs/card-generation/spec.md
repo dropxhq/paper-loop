@@ -1,4 +1,4 @@
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: LLM 筛选与分类
 系统 SHALL 将段落列表发送给 LLM，每个段落可产出零到多个词/短语卡片数据。

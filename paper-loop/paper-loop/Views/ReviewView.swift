@@ -135,8 +135,8 @@ struct ReviewView: View {
                 .multilineTextAlignment(.center)
                 .lineSpacing(2)
             // Quote box (source sentence preview)
-            if !card.sourceSentence.isEmpty {
-                Text(card.sourceSentence)
+            if let sourceSentence = card.occurrences.last?.sourceSentence, !sourceSentence.isEmpty {
+                Text(sourceSentence)
                     .font(.system(size: 14))
                     .foregroundStyle(Color(red: 0.259, green: 0.239, blue: 0.208))
                     .lineSpacing(4)
@@ -148,7 +148,7 @@ struct ReviewView: View {
             }
             HStack(spacing: 8) {
                 Button {
-                    speak(card.type == .sentence ? card.sourceSentence : card.term)
+                    speak(card.type == .sentence ? (card.occurrences.last?.sourceSentence ?? card.term) : card.term)
                 } label: {
                     HStack(spacing: 6) {
                         if isSpeaking {
@@ -188,8 +188,8 @@ struct ReviewView: View {
                     .font(.system(size: 15))
                     .foregroundStyle(Theme.textMuted)
             }
-            if !card.sourceSentence.isEmpty {
-                Text(card.sourceSentence)
+            if let sourceSentence = card.occurrences.last?.sourceSentence, !sourceSentence.isEmpty {
+                Text(sourceSentence)
                     .font(.system(size: 14))
                     .foregroundStyle(Color(red: 0.259, green: 0.239, blue: 0.208))
                     .lineSpacing(4)
@@ -199,7 +199,7 @@ struct ReviewView: View {
                     .clipShape(RoundedRectangle(cornerRadius: Theme.r16))
                     .overlay(RoundedRectangle(cornerRadius: Theme.r16).stroke(Theme.line, lineWidth: 1))
             }
-            if let paper = card.paper {
+            if let paper = card.occurrences.last?.paper {
                 Text("来源：\(paper.title)")
                     .font(.system(size: 12))
                     .foregroundStyle(Theme.textMuted)

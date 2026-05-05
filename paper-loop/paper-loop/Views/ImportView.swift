@@ -230,25 +230,40 @@ struct ImportView: View {
             modelContext.insert(paper)
         }
 
-        let existingTerms = existingPaper.map { p in
-            Set(p.cards.map { $0.term.lowercased() })
-        } ?? []
+        // Build a lemma → Card lookup from all existing cards for dedup
+        let allCards = (try? modelContext.fetch(FetchDescriptor<Card>())) ?? []
+        var lemmaToCard: [String: Card] = [:]
+        for card in allCards {
+            lemmaToCard[card.term.lowercased()] = card
+        }
 
         for cd in result.cards {
-            if existingTerms.contains(cd.term.lowercased()) { continue }
+            let lowerLemma = cd.lemma.lowercased()
+            let anchor = buildAnchor(from: cd, htmlURL: result.htmlURL)
 
-            let cardType = CardType(rawValue: cd.type) ?? .word
-            let anchor: AnchorData? = buildAnchor(from: cd, htmlURL: result.htmlURL)
-            let card = Card(
-                term: cd.term,
-                type: cardType,
+            let occurrence = Occurrence(
+                termInContext: cd.termInContext,
                 sourceSentence: cd.sourceSentence,
-                zhHint: cd.zhHint,
-                valueScore: cd.valueScore,
                 anchor: anchor,
                 paper: paper
             )
-            modelContext.insert(card)
+
+            if let existingCard = lemmaToCard[lowerLemma] {
+                // Append occurrence to existing card
+                existingCard.occurrences.append(occurrence)
+            } else {
+                // Create new card + occurrence
+                let cardType = CardType(rawValue: cd.type) ?? .word
+                let card = Card(
+                    term: cd.lemma,
+                    type: cardType,
+                    zhHint: cd.zhHint,
+                    valueScore: cd.valueScore
+                )
+                modelContext.insert(card)
+                card.occurrences.append(occurrence)
+                lemmaToCard[lowerLemma] = card
+            }
         }
 
         importState = .done
@@ -256,13 +271,13 @@ struct ImportView: View {
     }
 
     private func buildAnchor(from cd: CardData, htmlURL: URL?) -> AnchorData? {
-        if cd.anchor.hasPrefix("element:") {
-            let elementId = String(cd.anchor.dropFirst("element:".count))
+        if cd.paragraphAnchor.hasPrefix("element:") {
+            let elementId = String(cd.paragraphAnchor.dropFirst("element:".count))
             if let url = htmlURL {
-                return .html(elementId: elementId, htmlURL: url)
+                return .html(elementId: elementId, htmlURL: url, charOffset: cd.charOffset)
             }
-        } else if cd.anchor.hasPrefix("page:") {
-            let pageStr = String(cd.anchor.dropFirst("page:".count))
+        } else if cd.paragraphAnchor.hasPrefix("page:") {
+            let pageStr = String(cd.paragraphAnchor.dropFirst("page:".count))
             if let page = Int(pageStr) {
                 return .pdf(page: page, bbox: .zero)
             }
@@ -274,5 +289,5 @@ struct ImportView: View {
 #Preview {
     @Previewable @State var tab = 0
     ImportView(selectedTab: $tab)
-        .modelContainer(for: [Paper.self, Card.self, ReviewLog.self], inMemory: true)
+        .modelContainer(for: [Paper.self, Card.self, Occurrence.self, ReviewLog.self], inMemory: true)
 }

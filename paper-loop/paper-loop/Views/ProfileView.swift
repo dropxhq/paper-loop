@@ -257,8 +257,9 @@ private struct PaperRowView: View {
             Text(paper.arxivId)
                 .font(.system(size: 12))
                 .foregroundStyle(Theme.textMuted)
-            if !paper.cards.isEmpty {
-                Text("\(paper.cards.count) 张词卡")
+            if !paper.occurrences.isEmpty {
+                let cardCount = Set(paper.occurrences.compactMap { $0.card?.id }).count
+                Text("\(cardCount) 张词卡")
                     .font(.system(size: 12))
                     .foregroundStyle(Theme.textMuted)
             }
@@ -273,7 +274,7 @@ private struct PaperRowView: View {
 
 #Preview {
     ProfileView()
-        .modelContainer(for: [Paper.self, Card.self, ReviewLog.self], inMemory: true)
+        .modelContainer(for: [Paper.self, Card.self, Occurrence.self, ReviewLog.self], inMemory: true)
 }
 
 // MARK: - TTS Config Row

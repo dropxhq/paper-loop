@@ -11,7 +11,8 @@ struct PaperDetailView: View {
     @State private var reimportDeleted = false
 
     private var sortedCards: [Card] {
-        paper.cards.sorted { $0.term.lowercased() < $1.term.lowercased() }
+        let unique = Set(paper.occurrences.compactMap { $0.card })
+        return unique.sorted { $0.term.lowercased() < $1.term.lowercased() }
     }
 
     var body: some View {
@@ -73,7 +74,7 @@ struct PaperDetailView: View {
                 .foregroundStyle(Theme.textPrimary)
                 .lineSpacing(3)
             HStack(spacing: 16) {
-                MiniStatBox(value: "\(paper.cards.count)", label: "词卡")
+                MiniStatBox(value: "\(Set(paper.occurrences.compactMap { $0.card?.id }).count)", label: "词卡")
                 MiniStatBox(
                     value: paper.importedAt.formatted(.dateTime.month().day()),
                     label: "导入日期"
@@ -136,7 +137,7 @@ struct PaperDetailView: View {
 
 #Preview {
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
-    let container = try! ModelContainer(for: Paper.self, Card.self, ReviewLog.self, configurations: config)
+    let container = try! ModelContainer(for: Paper.self, Card.self, Occurrence.self, ReviewLog.self, configurations: config)
     let paper = Paper(
         arxivId: "2301.00001",
         title: "Attention Is All You Need",

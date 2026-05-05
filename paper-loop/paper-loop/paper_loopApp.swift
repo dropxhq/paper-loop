@@ -7,14 +7,34 @@ struct paper_loopApp: App {
         let schema = Schema([
             Paper.self,
             Card.self,
+            Occurrence.self,
             ReviewLog.self,
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
+        func makeContainer() throws -> ModelContainer {
+            try ModelContainer(for: schema, configurations: [modelConfiguration])
+        }
+
+        func destroyStore() {
+            let storeURL = modelConfiguration.url
+            let shmURL = storeURL.deletingPathExtension().appendingPathExtension("sqlite-shm")
+            let walURL = storeURL.deletingPathExtension().appendingPathExtension("sqlite-wal")
+            for url in [storeURL, shmURL, walURL] {
+                try? FileManager.default.removeItem(at: url)
+            }
+        }
+
         do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
+            return try makeContainer()
         } catch {
-            fatalError("Could not create ModelContainer: \(error)")
+            // Schema incompatible — destroy all data and rebuild
+            destroyStore()
+            do {
+                return try makeContainer()
+            } catch {
+                fatalError("Could not create ModelContainer even after destroying data: \(error)")
+            }
         }
     }()
 

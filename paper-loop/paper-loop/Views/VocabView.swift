@@ -8,6 +8,9 @@ struct VocabView: View {
 
     @State private var searchText = ""
     @State private var selectedType: CardType? = nil
+    @State private var isEditing = false
+    @State private var selectedCards: Set<PersistentIdentifier> = []
+    @State private var showDeleteConfirm = false
 
     private var filteredCards: [Card] {
         cards.filter { card in
@@ -34,17 +37,68 @@ struct VocabView: View {
             .navigationTitle("词表")
             .searchable(text: $searchText, prompt: "搜索词汇")
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Menu {
-                        Button("全部") { selectedType = nil }
-                        Button("单词") { selectedType = .word }
-                        Button("短语") { selectedType = .phrase }
-                        Button("句子") { selectedType = .sentence }
-                    } label: {
-                        Label("筛选", systemImage: selectedType == nil ? "line.3.horizontal.decrease.circle" : "line.3.horizontal.decrease.circle.fill")
-                            .foregroundStyle(Theme.primary)
+                ToolbarItem(placement: .topBarLeading) {
+                    if isEditing {
+                        Button(selectedCards.count == filteredCards.count ? "取消全选" : "全选") {
+                            if selectedCards.count == filteredCards.count {
+                                selectedCards.removeAll()
+                            } else {
+                                selectedCards = Set(filteredCards.map(\.persistentModelID))
+                            }
+                        }
+                        .foregroundStyle(Theme.primary)
                     }
                 }
+                ToolbarItem(placement: .topBarTrailing) {
+                    if isEditing {
+                        HStack(spacing: 16) {
+                            Button(role: .destructive) {
+                                if !selectedCards.isEmpty { showDeleteConfirm = true }
+                            } label: {
+                                Label("删除", systemImage: "trash")
+                                    .foregroundStyle(selectedCards.isEmpty ? Theme.textMuted : .red)
+                            }
+                            .disabled(selectedCards.isEmpty)
+                            Button("完成") {
+                                isEditing = false
+                                selectedCards.removeAll()
+                            }
+                            .foregroundStyle(Theme.primary)
+                        }
+                    } else {
+                        HStack(spacing: 16) {
+                            Button {
+                                isEditing = true
+                            } label: {
+                                Text("管理")
+                                    .foregroundStyle(Theme.primary)
+                            }
+                            Menu {
+                                Button("全部") { selectedType = nil }
+                                Button("单词") { selectedType = .word }
+                                Button("短语") { selectedType = .phrase }
+                                Button("句子") { selectedType = .sentence }
+                            } label: {
+                                Label("筛选", systemImage: selectedType == nil ? "line.3.horizontal.decrease.circle" : "line.3.horizontal.decrease.circle.fill")
+                                    .foregroundStyle(Theme.primary)
+                            }
+                        }
+                    }
+                }
+            }
+            .confirmationDialog(
+                "删除 \(selectedCards.count) 张词卡？",
+                isPresented: $showDeleteConfirm,
+                titleVisibility: .visible
+            ) {
+                Button("删除", role: .destructive) {
+                    for card in filteredCards where selectedCards.contains(card.persistentModelID) {
+                        modelContext.delete(card)
+                    }
+                    selectedCards.removeAll()
+                    isEditing = false
+                }
+                Button("取消", role: .cancel) {}
             }
         }
     }
@@ -73,10 +127,36 @@ struct VocabView: View {
                         .padding(.top, 40)
                 } else {
                     ForEach(filteredCards) { card in
-                        NavigationLink(destination: SourceDetailView(card: card)) {
-                            VocabRowView(card: card)
+                        if isEditing {
+                            Button {
+                                let id = card.persistentModelID
+                                if selectedCards.contains(id) {
+                                    selectedCards.remove(id)
+                                } else {
+                                    selectedCards.insert(id)
+                                }
+                            } label: {
+                                HStack(spacing: 10) {
+                                    Image(systemName: selectedCards.contains(card.persistentModelID) ? "checkmark.circle.fill" : "circle")
+                                        .foregroundStyle(selectedCards.contains(card.persistentModelID) ? Theme.primary : Theme.textMuted)
+                                        .font(.system(size: 22))
+                                    VocabRowView(card: card)
+                                }
+                            }
+                            .buttonStyle(.plain)
+                        } else {
+                            NavigationLink(destination: SourceDetailView(card: card)) {
+                                VocabRowView(card: card)
+                            }
+                            .buttonStyle(.plain)
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                Button(role: .destructive) {
+                                    modelContext.delete(card)
+                                } label: {
+                                    Label("删除", systemImage: "trash")
+                                }
+                            }
                         }
-                        .buttonStyle(.plain)
                     }
                 }
             }
@@ -101,7 +181,7 @@ struct VocabRowView: View {
                         .foregroundStyle(Theme.textMuted)
                         .lineLimit(1)
                 }
-                if let paperTitle = card.paper?.title {
+                if let paperTitle = card.occurrences.first?.paper?.title {
                     Text(paperTitle)
                         .font(.system(size: 12))
                         .foregroundStyle(Theme.textMuted.opacity(0.7))
@@ -133,5 +213,5 @@ struct VocabRowView: View {
 
 #Preview {
     VocabView()
-        .modelContainer(for: [Paper.self, Card.self, ReviewLog.self], inMemory: true)
+        .modelContainer(for: [Paper.self, Card.self, Occurrence.self, ReviewLog.self], inMemory: true)
 }

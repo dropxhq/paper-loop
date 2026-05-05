@@ -11,8 +11,8 @@ final class Paper {
     var pdfURL: URL
     var importedAt: Date
 
-    @Relationship(deleteRule: .cascade, inverse: \Card.paper)
-    var cards: [Card] = []
+    @Relationship(deleteRule: .cascade, inverse: \Occurrence.paper)
+    var occurrences: [Occurrence] = []
 
     init(id: UUID = UUID(), arxivId: String, title: String, abstract: String, htmlURL: URL? = nil, pdfURL: URL, importedAt: Date = Date()) {
         self.id = id
