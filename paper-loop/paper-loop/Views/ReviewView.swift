@@ -138,9 +138,8 @@ struct ReviewView: View {
                 .lineSpacing(2)
             // Quote box (source sentence preview)
             if let sourceSentence = card.occurrences.last?.sourceSentence, !sourceSentence.isEmpty {
-                Text(sourceSentence)
+                Text(highlightedSentence(sourceSentence, term: card.term))
                     .font(.system(size: 14))
-                    .foregroundStyle(Theme.textMuted)
                     .lineSpacing(4)
                     .padding(14)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -191,9 +190,8 @@ struct ReviewView: View {
                     .foregroundStyle(Theme.textMuted)
             }
             if let sourceSentence = card.occurrences.last?.sourceSentence, !sourceSentence.isEmpty {
-                Text(sourceSentence)
+                Text(highlightedSentence(sourceSentence, term: card.term))
                     .font(.system(size: 14))
-                    .foregroundStyle(Theme.textMuted)
                     .lineSpacing(4)
                     .padding(14)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -333,6 +331,22 @@ struct ReviewView: View {
         .padding(.vertical, 8)
         .background(Theme.surface2)
         .clipShape(RoundedRectangle(cornerRadius: Theme.r16))
+    }
+
+    // MARK: - Sentence Highlight
+
+    private func highlightedSentence(_ sentence: String, term: String) -> AttributedString {
+        var attributed = AttributedString(sentence)
+        attributed.foregroundColor = UIColor(Theme.textMuted)
+        guard !term.isEmpty,
+              let range = sentence.range(of: term, options: [.caseInsensitive, .diacriticInsensitive]) else {
+            return attributed
+        }
+        let lower = AttributedString.Index(range.lowerBound, within: attributed)!
+        let upper = AttributedString.Index(range.upperBound, within: attributed)!
+        attributed[lower..<upper].foregroundColor = UIColor(Theme.primary)
+        attributed[lower..<upper].font = UIFont.systemFont(ofSize: 14, weight: .semibold)
+        return attributed
     }
 
     // MARK: - Card Type Label
