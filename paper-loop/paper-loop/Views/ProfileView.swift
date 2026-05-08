@@ -253,7 +253,7 @@ struct LLMSettingsSheet: View {
                     VStack(spacing: 16) {
                         // Intro
                         VStack(alignment: .leading, spacing: 6) {
-                            Text("配置 OpenAI 兼容的 LLM 接口，用于从论文中提取词汇卡片。")
+                            Text("配置大模型 API 接口（支持 DashScope、豆包等），用于从论文中提取词汇卡片。")
                                 .font(.system(size: 14))
                                 .foregroundStyle(Theme.textMuted)
                                 .fixedSize(horizontal: false, vertical: true)
