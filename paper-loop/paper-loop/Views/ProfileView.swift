@@ -14,6 +14,7 @@ struct ProfileView: View {
     @State private var showAPIKeySaved = false
     @AppStorage("llm_base_url") private var savedBaseURL = ""
     @AppStorage("llm_model") private var savedModel = ""
+    @AppStorage("appColorScheme") private var appColorScheme = "auto"
 
     private var maskedKey: String {
         guard let key = KeychainHelper.read(key: "llm_api_key"), !key.isEmpty else {
@@ -87,26 +88,9 @@ struct ProfileView: View {
                         .padding(14)
                         .paperCardStyle()
 
-                        // TTS card
+                        // AI & 语音设置（合并卡片）
                         VStack(spacing: 0) {
-                            SectionHeader("语音朗读")
-                                .padding(.bottom, 10)
-                            Button {
-                                showTTSSettings = true
-                            } label: {
-                                TTSConfigRow()
-                                    .id(showTTSSettings)
-                            }
-                            .buttonStyle(.plain)
-                        }
-                        .padding(14)
-                        .paperCardStyle()
-                        .sheet(isPresented: $showTTSSettings) {
-                            TTSSettingsSheet()
-                        }
-
-                        // AI Settings card
-                        VStack(spacing: 0) {
+                            // AI 设置区块
                             SectionHeader("AI 设置")
                                 .padding(.bottom, 10)
 
@@ -178,6 +162,23 @@ struct ProfileView: View {
                                 Text(showAPIKeySaved ? "已保存 ✓" : "保存设置")
                             }
                             .buttonStyle(PrimaryButtonStyle())
+
+                            // 分隔线
+                            Divider()
+                                .background(Theme.line)
+                                .padding(.vertical, 14)
+
+                            // 语音朗读区块
+                            SectionHeader("语音朗读")
+                                .padding(.bottom, 10)
+
+                            Button {
+                                showTTSSettings = true
+                            } label: {
+                                TTSConfigRow()
+                                    .id(showTTSSettings)
+                            }
+                            .buttonStyle(.plain)
                         }
                         .padding(14)
                         .paperCardStyle()
@@ -185,14 +186,31 @@ struct ProfileView: View {
                             llmBaseURLInput = savedBaseURL
                             llmModelInput = savedModel
                         }
+                        .sheet(isPresented: $showTTSSettings) {
+                            TTSSettingsSheet()
+                        }
 
-                        // Settings card
+                        // 设置卡片（仅外观）
                         VStack(spacing: 0) {
                             SectionHeader("设置")
                                 .padding(.bottom, 10)
-                            settingsRow(title: "字体大小", subtitle: "正文 15pt")
-                            settingsRow(title: "朗读速度", subtitle: "正常")
-                            settingsRow(title: "深色模式", subtitle: "跟随系统")
+                            HStack {
+                                Text("外观")
+                                    .font(.system(size: 15, weight: .medium))
+                                    .foregroundStyle(Theme.textPrimary)
+                                Spacer()
+                                Picker("", selection: $appColorScheme) {
+                                    Text("浅色").tag("light")
+                                    Text("深色").tag("dark")
+                                    Text("自动").tag("auto")
+                                }
+                                .pickerStyle(.segmented)
+                                .frame(width: 162)
+                            }
+                            .padding(12)
+                            .background(Theme.surface2)
+                            .clipShape(RoundedRectangle(cornerRadius: Theme.r18))
+                            .overlay(RoundedRectangle(cornerRadius: Theme.r18).stroke(Theme.line, lineWidth: 1))
                         }
                         .padding(14)
                         .paperCardStyle()
@@ -221,27 +239,6 @@ struct ProfileView: View {
         }
     }
 
-    private func settingsRow(title: String, subtitle: String) -> some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundStyle(Theme.textPrimary)
-                Text(subtitle)
-                    .font(.system(size: 12))
-                    .foregroundStyle(Theme.textMuted)
-            }
-            Spacer()
-            Image(systemName: "chevron.right")
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(Theme.textMuted)
-        }
-        .padding(12)
-        .background(Theme.surface2)
-        .clipShape(RoundedRectangle(cornerRadius: Theme.r18))
-        .overlay(RoundedRectangle(cornerRadius: Theme.r18).stroke(Theme.line, lineWidth: 1))
-        .padding(.top, 4)
-    }
 }
 
 // MARK: - Subviews

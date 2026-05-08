@@ -1,17 +1,60 @@
 import SwiftUI
+import UIKit
 
 // MARK: - Design Tokens (matches paper_vocab_iphone_mvp_v2.html)
 
 enum Theme {
-    // Colors
-    static let bg            = Color(red: 0.965, green: 0.949, blue: 0.918) // #f6f2ea
-    static let surface       = Color(red: 1.000, green: 0.996, blue: 0.980) // #fffdfa
-    static let surface2      = Color(red: 0.937, green: 0.902, blue: 0.855) // #efe6da
-    static let line          = Color(red: 0.129, green: 0.114, blue: 0.094).opacity(0.10)
-    static let textPrimary   = Color(red: 0.125, green: 0.114, blue: 0.094) // #201d18
-    static let textMuted     = Color(red: 0.435, green: 0.404, blue: 0.365) // #6f675d
-    static let primary       = Color(red: 0.047, green: 0.408, blue: 0.396) // #0c6865
-    static let primarySoft   = Color(red: 0.863, green: 0.910, blue: 0.898) // #dce8e5
+    // Colors — adaptive light/dark
+    // Light:  warm cream palette (#f6f2ea, #fffdfa, #efe6da …)
+    // Dark:   warm dark palette  (#1c1a15, #252219, #2e2b22 …)
+
+    static let bg = Color(UIColor { t in
+        t.userInterfaceStyle == .dark
+            ? UIColor(red: 0.110, green: 0.102, blue: 0.082, alpha: 1) // #1c1a15
+            : UIColor(red: 0.965, green: 0.949, blue: 0.918, alpha: 1) // #f6f2ea
+    })
+
+    static let surface = Color(UIColor { t in
+        t.userInterfaceStyle == .dark
+            ? UIColor(red: 0.145, green: 0.133, blue: 0.098, alpha: 1) // #252219
+            : UIColor(red: 1.000, green: 0.996, blue: 0.980, alpha: 1) // #fffdfa
+    })
+
+    static let surface2 = Color(UIColor { t in
+        t.userInterfaceStyle == .dark
+            ? UIColor(red: 0.180, green: 0.169, blue: 0.133, alpha: 1) // #2e2b22
+            : UIColor(red: 0.937, green: 0.902, blue: 0.855, alpha: 1) // #efe6da
+    })
+
+    static let line = Color(UIColor { t in
+        t.userInterfaceStyle == .dark
+            ? UIColor(white: 1.0, alpha: 0.12)
+            : UIColor(red: 0.129, green: 0.114, blue: 0.094, alpha: 0.10)
+    })
+
+    static let textPrimary = Color(UIColor { t in
+        t.userInterfaceStyle == .dark
+            ? UIColor(red: 0.941, green: 0.925, blue: 0.878, alpha: 1) // #f0ece0
+            : UIColor(red: 0.125, green: 0.114, blue: 0.094, alpha: 1) // #201d18
+    })
+
+    static let textMuted = Color(UIColor { t in
+        t.userInterfaceStyle == .dark
+            ? UIColor(red: 0.541, green: 0.510, blue: 0.459, alpha: 1) // #8a8275
+            : UIColor(red: 0.435, green: 0.404, blue: 0.365, alpha: 1) // #6f675d
+    })
+
+    static let primary = Color(UIColor { t in
+        t.userInterfaceStyle == .dark
+            ? UIColor(red: 0.082, green: 0.569, blue: 0.553, alpha: 1) // #15918d
+            : UIColor(red: 0.047, green: 0.408, blue: 0.396, alpha: 1) // #0c6865
+    })
+
+    static let primarySoft = Color(UIColor { t in
+        t.userInterfaceStyle == .dark
+            ? UIColor(red: 0.106, green: 0.216, blue: 0.204, alpha: 1) // #1b3734
+            : UIColor(red: 0.863, green: 0.910, blue: 0.898, alpha: 1) // #dce8e5
+    })
 
     // Corner radii
     static let r16: CGFloat = 16
@@ -19,7 +62,11 @@ enum Theme {
     static let r24: CGFloat = 24
 
     // Shadow
-    static let cardShadow = Color.black.opacity(0.08)
+    static let cardShadow = Color(UIColor { t in
+        t.userInterfaceStyle == .dark
+            ? UIColor(white: 0, alpha: 0.30)
+            : UIColor(white: 0, alpha: 0.08)
+    })
 }
 
 // MARK: - ViewModifiers

@@ -1,6 +1,9 @@
 {
   "sourceLanguage" : "zh-Hans",
   "strings" : {
+    "" : {
+
+    },
     "%lld / %lld" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1140,6 +1143,9 @@
           }
         }
       }
+    },
+    "外观" : {
+
     },
     "字体大小" : {
       "comment" : "Settings row title",
@@ -2351,6 +2357,12 @@
         }
       }
     },
+    "浅色" : {
+
+    },
+    "深色" : {
+
+    },
     "深色模式" : {
       "comment" : "Settings row title",
       "extractionState" : "stale",
@@ -2631,6 +2643,9 @@
           }
         }
       }
+    },
+    "自动" : {
+
     },
     "解析论文内容中…" : {
       "comment" : "Import stage label",

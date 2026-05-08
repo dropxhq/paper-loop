@@ -38,9 +38,20 @@ struct paper_loopApp: App {
         }
     }()
 
+    @AppStorage("appColorScheme") private var appColorScheme = "auto"
+
+    private var preferredScheme: ColorScheme? {
+        switch appColorScheme {
+        case "light": return .light
+        case "dark":  return .dark
+        default:      return nil
+        }
+    }
+
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .preferredColorScheme(preferredScheme)
         }
         .modelContainer(sharedModelContainer)
     }
