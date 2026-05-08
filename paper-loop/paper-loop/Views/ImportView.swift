@@ -42,7 +42,7 @@ struct ImportView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(16)
                     .background(
-                        LinearGradient(colors: [Theme.surface, Color(red: 0.961, green: 0.937, blue: 0.902)],
+                        LinearGradient(colors: [Theme.surface, Theme.surface2],
                                        startPoint: .top, endPoint: .bottom)
                     )
                     .clipShape(RoundedRectangle(cornerRadius: Theme.r24))

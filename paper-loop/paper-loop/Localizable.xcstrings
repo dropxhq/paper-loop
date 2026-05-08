@@ -20,6 +20,9 @@
     "%lld%%" : {
 
     },
+    "AI 模型设置" : {
+
+    },
     "AI 设置" : {
       "comment" : "Profile section header",
       "extractionState" : "stale",
@@ -131,8 +134,12 @@
         }
       }
     },
+    "Base URL" : {
+
+    },
     "Base URL（留空使用默认）" : {
       "comment" : "LLM base URL field label",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -168,6 +175,7 @@
     },
     "DashScope 用户：语音朗读与卡片生成可使用同一 Key" : {
       "comment" : "API key tip",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -200,6 +208,9 @@
           }
         }
       }
+    },
+    "DashScope 用户：语音朗读与卡片生成可使用同一 Key。" : {
+
     },
     "DashScope 语音" : {
       "comment" : "TTS config row title",
@@ -248,7 +259,7 @@
     "https://dashscope.aliyuncs.com/compatible-mode/v1" : {
 
     },
-    "LLM API Key" : {
+    "LLM 模型" : {
 
     },
     "PDF 原文" : {
@@ -505,6 +516,7 @@
     },
     "保存设置" : {
       "comment" : "Save settings button",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1503,6 +1515,7 @@
     },
     "已保存 ✓" : {
       "comment" : "Saved confirmation",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2212,8 +2225,12 @@
         }
       }
     },
+    "模型" : {
+
+    },
     "模型（留空使用默认 deepseek-v4-flash）" : {
       "comment" : "LLM model field label",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3250,6 +3267,7 @@
     },
     "输入 API Key" : {
       "comment" : "LLM API key placeholder",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3457,6 +3475,9 @@
           }
         }
       }
+    },
+    "配置 OpenAI 兼容的 LLM 接口，用于从论文中提取词汇卡片。" : {
+
     },
     "重新导入" : {
       "comment" : "PaperDetail reimport button",

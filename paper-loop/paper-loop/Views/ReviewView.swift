@@ -140,7 +140,7 @@ struct ReviewView: View {
             if let sourceSentence = card.occurrences.last?.sourceSentence, !sourceSentence.isEmpty {
                 Text(sourceSentence)
                     .font(.system(size: 14))
-                    .foregroundStyle(Color(red: 0.259, green: 0.239, blue: 0.208))
+                    .foregroundStyle(Theme.textMuted)
                     .lineSpacing(4)
                     .padding(14)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -193,7 +193,7 @@ struct ReviewView: View {
             if let sourceSentence = card.occurrences.last?.sourceSentence, !sourceSentence.isEmpty {
                 Text(sourceSentence)
                     .font(.system(size: 14))
-                    .foregroundStyle(Color(red: 0.259, green: 0.239, blue: 0.208))
+                    .foregroundStyle(Theme.textMuted)
                     .lineSpacing(4)
                     .padding(14)
                     .frame(maxWidth: .infinity, alignment: .leading)

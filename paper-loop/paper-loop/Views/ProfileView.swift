@@ -8,23 +8,8 @@ struct ProfileView: View {
     @Query private var reviewLogs: [ReviewLog]
 
     @State private var showTTSSettings = false
-    @State private var llmAPIKeyInput = ""
-    @State private var llmBaseURLInput = ""
-    @State private var llmModelInput = ""
-    @State private var showAPIKeySaved = false
-    @AppStorage("llm_base_url") private var savedBaseURL = ""
-    @AppStorage("llm_model") private var savedModel = ""
+    @State private var showLLMSettings = false
     @AppStorage("appColorScheme") private var appColorScheme = "auto"
-
-    private var maskedKey: String {
-        guard let key = KeychainHelper.read(key: "llm_api_key"), !key.isEmpty else {
-            return ""
-        }
-        if key.count <= 8 { return String(repeating: "•", count: key.count) }
-        let prefix = key.prefix(5)
-        let suffix = key.suffix(4)
-        return "\(prefix)•••\(suffix)"
-    }
 
     private var todayReviews: Int {
         let calendar = Calendar.current
@@ -94,74 +79,13 @@ struct ProfileView: View {
                             SectionHeader("AI 设置")
                                 .padding(.bottom, 10)
 
-                            // API Key field
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text("LLM API Key")
-                                    .font(.system(size: 13, weight: .medium))
-                                    .foregroundStyle(Theme.textMuted)
-                                SecureField("输入 API Key", text: $llmAPIKeyInput)
-                                    .font(.system(size: 14))
-                                    .foregroundStyle(Theme.textPrimary)
-                                    .padding(.horizontal, 12)
-                                    .frame(minHeight: 42)
-                                    .background(Theme.surface2)
-                                    .clipShape(RoundedRectangle(cornerRadius: Theme.r16))
-                                    .overlay(RoundedRectangle(cornerRadius: Theme.r16).stroke(Theme.line, lineWidth: 1))
-                                if !maskedKey.isEmpty {
-                                    Text("当前：\(maskedKey)")
-                                        .font(.system(size: 12))
-                                        .foregroundStyle(Theme.textMuted)
-                                }
-                                Text("DashScope 用户：语音朗读与卡片生成可使用同一 Key")
-                                    .font(.system(size: 12))
-                                    .foregroundStyle(Theme.textMuted)
-                                    .lineSpacing(3)
-                            }
-                            .padding(.bottom, 10)
-
-                            // Base URL field
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text("Base URL（留空使用默认）")
-                                    .font(.system(size: 13, weight: .medium))
-                                    .foregroundStyle(Theme.textMuted)
-                                TextField("https://dashscope.aliyuncs.com/compatible-mode/v1", text: $llmBaseURLInput)
-                                    .font(.system(size: 13))
-                                    .foregroundStyle(Theme.textPrimary)
-                                    .autocorrectionDisabled()
-                                    .textInputAutocapitalization(.never)
-                                    .keyboardType(.URL)
-                                    .padding(.horizontal, 12)
-                                    .frame(minHeight: 42)
-                                    .background(Theme.surface2)
-                                    .clipShape(RoundedRectangle(cornerRadius: Theme.r16))
-                                    .overlay(RoundedRectangle(cornerRadius: Theme.r16).stroke(Theme.line, lineWidth: 1))
-                            }
-                            .padding(.bottom, 10)
-
-                            // Model field
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text("模型（留空使用默认 deepseek-v4-flash）")
-                                    .font(.system(size: 13, weight: .medium))
-                                    .foregroundStyle(Theme.textMuted)
-                                TextField("deepseek-v4-flash", text: $llmModelInput)
-                                    .font(.system(size: 13))
-                                    .foregroundStyle(Theme.textPrimary)
-                                    .autocorrectionDisabled()
-                                    .textInputAutocapitalization(.never)
-                                    .padding(.horizontal, 12)
-                                    .frame(minHeight: 42)
-                                    .background(Theme.surface2)
-                                    .clipShape(RoundedRectangle(cornerRadius: Theme.r16))
-                                    .overlay(RoundedRectangle(cornerRadius: Theme.r16).stroke(Theme.line, lineWidth: 1))
-                            }
-                            .padding(.bottom, 10)
-
                             Button {
-                                saveAISettings()
+                                showLLMSettings = true
                             } label: {
-                                Text(showAPIKeySaved ? "已保存 ✓" : "保存设置")
+                                LLMConfigRow()
+                                    .id(showLLMSettings)
                             }
-                            .buttonStyle(PrimaryButtonStyle())
+                            .buttonStyle(.plain)
 
                             // 分隔线
                             Divider()
@@ -182,9 +106,8 @@ struct ProfileView: View {
                         }
                         .padding(14)
                         .paperCardStyle()
-                        .onAppear {
-                            llmBaseURLInput = savedBaseURL
-                            llmModelInput = savedModel
+                        .sheet(isPresented: $showLLMSettings) {
+                            LLMSettingsSheet()
                         }
                         .sheet(isPresented: $showTTSSettings) {
                             TTSSettingsSheet()
@@ -225,21 +148,8 @@ struct ProfileView: View {
         }
     }
 
-    private func saveAISettings() {
-        if !llmAPIKeyInput.isEmpty {
-            KeychainHelper.save(key: "llm_api_key", value: llmAPIKeyInput)
-            llmAPIKeyInput = ""
-        }
-        savedBaseURL = llmBaseURLInput
-        savedModel = llmModelInput
-        showAPIKeySaved = true
-        Task {
-            try? await Task.sleep(nanoseconds: 2_000_000_000)
-            showAPIKeySaved = false
-        }
-    }
-
 }
+
 
 // MARK: - Subviews
 
@@ -273,6 +183,188 @@ private struct PaperRowView: View {
 #Preview {
     ProfileView()
         .modelContainer(for: [Paper.self, Card.self, Occurrence.self, ReviewLog.self], inMemory: true)
+}
+
+// MARK: - LLM Config Row
+
+private struct LLMConfigRow: View {
+    @State private var isConfigured = false
+    @AppStorage("llm_model") private var savedModel = ""
+
+    private var subtitle: String {
+        if !isConfigured { return "未配置 · 点击填写 API Key" }
+        let model = savedModel.isEmpty ? "deepseek-v4-flash" : savedModel
+        return "已配置 · \(model)"
+    }
+
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("LLM 模型")
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(Theme.textPrimary)
+                Text(subtitle)
+                    .font(.system(size: 12))
+                    .foregroundStyle(isConfigured ? Theme.primary : Theme.textMuted)
+            }
+            Spacer()
+            if isConfigured {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(Theme.primary)
+                    .font(.system(size: 16))
+            }
+            Image(systemName: "chevron.right")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(Theme.textMuted)
+        }
+        .padding(12)
+        .background(Theme.surface2)
+        .clipShape(RoundedRectangle(cornerRadius: Theme.r18))
+        .overlay(RoundedRectangle(cornerRadius: Theme.r18).stroke(Theme.line, lineWidth: 1))
+        .padding(.top, 4)
+        .onAppear {
+            isConfigured = (KeychainHelper.read(key: "llm_api_key").map { !$0.isEmpty } ?? false)
+        }
+    }
+}
+
+// MARK: - LLM Settings Sheet
+
+struct LLMSettingsSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @AppStorage("llm_base_url") private var savedBaseURL = ""
+    @AppStorage("llm_model") private var savedModel = ""
+
+    @State private var draftAPIKey = ""
+    @State private var draftBaseURL = ""
+    @State private var draftModel = ""
+
+    private var maskedKey: String {
+        guard let key = KeychainHelper.read(key: "llm_api_key"), !key.isEmpty else { return "" }
+        if key.count <= 8 { return String(repeating: "•", count: key.count) }
+        return "\(key.prefix(5))•••\(key.suffix(4))"
+    }
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Theme.bg.ignoresSafeArea()
+                ScrollView {
+                    VStack(spacing: 16) {
+                        // Intro
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("配置 OpenAI 兼容的 LLM 接口，用于从论文中提取词汇卡片。")
+                                .font(.system(size: 14))
+                                .foregroundStyle(Theme.textMuted)
+                                .fixedSize(horizontal: false, vertical: true)
+                            Text("DashScope 用户：语音朗读与卡片生成可使用同一 Key。")
+                                .font(.system(size: 13))
+                                .foregroundStyle(Theme.textMuted)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(14)
+                        .paperCardStyle()
+
+                        // API Key
+                        VStack(spacing: 0) {
+                            SectionHeader("API 凭据")
+                                .padding(.bottom, 10)
+                            VStack(spacing: 8) {
+                                HStack {
+                                    Text("API Key")
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundStyle(Theme.textPrimary)
+                                        .frame(width: 72, alignment: .leading)
+                                    SecureField(!maskedKey.isEmpty ? "当前：\(maskedKey)" : "粘贴你的 API Key", text: $draftAPIKey)
+                                        .font(.system(size: 14))
+                                        .foregroundStyle(Theme.textPrimary)
+                                        .autocorrectionDisabled()
+                                        .textInputAutocapitalization(.never)
+                                }
+                                .padding(12)
+                                .background(Theme.surface2)
+                                .clipShape(RoundedRectangle(cornerRadius: Theme.r16))
+                                .overlay(RoundedRectangle(cornerRadius: Theme.r16).stroke(Theme.line, lineWidth: 1))
+                            }
+                        }
+                        .padding(14)
+                        .paperCardStyle()
+
+                        // Base URL & Model
+                        VStack(spacing: 0) {
+                            SectionHeader("接口配置")
+                                .padding(.bottom, 10)
+                            VStack(spacing: 8) {
+                                HStack {
+                                    Text("Base URL")
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundStyle(Theme.textPrimary)
+                                        .frame(width: 72, alignment: .leading)
+                                    TextField("https://dashscope.aliyuncs.com/compatible-mode/v1", text: $draftBaseURL)
+                                        .font(.system(size: 13))
+                                        .foregroundStyle(Theme.textPrimary)
+                                        .autocorrectionDisabled()
+                                        .textInputAutocapitalization(.never)
+                                        .keyboardType(.URL)
+                                }
+                                .padding(12)
+                                .background(Theme.surface2)
+                                .clipShape(RoundedRectangle(cornerRadius: Theme.r16))
+                                .overlay(RoundedRectangle(cornerRadius: Theme.r16).stroke(Theme.line, lineWidth: 1))
+
+                                HStack {
+                                    Text("模型")
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundStyle(Theme.textPrimary)
+                                        .frame(width: 72, alignment: .leading)
+                                    TextField("deepseek-v4-flash", text: $draftModel)
+                                        .font(.system(size: 13))
+                                        .foregroundStyle(Theme.textPrimary)
+                                        .autocorrectionDisabled()
+                                        .textInputAutocapitalization(.never)
+                                }
+                                .padding(12)
+                                .background(Theme.surface2)
+                                .clipShape(RoundedRectangle(cornerRadius: Theme.r16))
+                                .overlay(RoundedRectangle(cornerRadius: Theme.r16).stroke(Theme.line, lineWidth: 1))
+                            }
+                        }
+                        .padding(14)
+                        .paperCardStyle()
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.top, 10)
+                    .padding(.bottom, 32)
+                }
+            }
+            .navigationTitle("AI 模型设置")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("取消") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("保存") { save() }
+                        .fontWeight(.semibold)
+                        .foregroundStyle(Theme.primary)
+                }
+            }
+            .onAppear {
+                draftBaseURL = savedBaseURL
+                draftModel = savedModel
+            }
+        }
+    }
+
+    private func save() {
+        if !draftAPIKey.trimmingCharacters(in: .whitespaces).isEmpty {
+            KeychainHelper.save(key: "llm_api_key", value: draftAPIKey.trimmingCharacters(in: .whitespaces))
+        }
+        savedBaseURL = draftBaseURL.trimmingCharacters(in: .whitespaces)
+        savedModel = draftModel.trimmingCharacters(in: .whitespaces)
+        dismiss()
+    }
 }
 
 // MARK: - TTS Config Row
