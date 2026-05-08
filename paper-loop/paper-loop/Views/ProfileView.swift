@@ -10,6 +10,7 @@ struct ProfileView: View {
     @State private var showTTSSettings = false
     @State private var showLLMSettings = false
     @AppStorage("appColorScheme") private var appColorScheme = "auto"
+    @AppStorage("dailyNewCardLimit") private var dailyNewCardLimit = 10
 
     private var todayReviews: Int {
         let calendar = Calendar.current
@@ -113,7 +114,7 @@ struct ProfileView: View {
                             TTSSettingsSheet()
                         }
 
-                        // 设置卡片（仅外观）
+                        // 设置卡片
                         VStack(spacing: 0) {
                             SectionHeader("设置")
                                 .padding(.bottom, 10)
@@ -129,6 +130,22 @@ struct ProfileView: View {
                                 }
                                 .pickerStyle(.segmented)
                                 .frame(width: 162)
+                            }
+                            .padding(12)
+                            .background(Theme.surface2)
+                            .clipShape(RoundedRectangle(cornerRadius: Theme.r18))
+                            .overlay(RoundedRectangle(cornerRadius: Theme.r18).stroke(Theme.line, lineWidth: 1))
+
+                            Divider()
+                                .background(Theme.line)
+                                .padding(.vertical, 10)
+
+                            HStack {
+                                Text("每日新卡数量")
+                                    .font(.system(size: 15, weight: .medium))
+                                    .foregroundStyle(Theme.textPrimary)
+                                Spacer()
+                                Stepper("\(dailyNewCardLimit) 张", value: $dailyNewCardLimit, in: 1...50)
                             }
                             .padding(12)
                             .background(Theme.surface2)

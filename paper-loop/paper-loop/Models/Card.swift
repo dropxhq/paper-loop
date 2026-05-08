@@ -15,6 +15,7 @@ final class Card {
     var zhHint: String
     var valueScore: Int
 
+    var introducedAt: Date?
     var nextReviewAt: Date
     var easeFactor: Double
     var interval: Int

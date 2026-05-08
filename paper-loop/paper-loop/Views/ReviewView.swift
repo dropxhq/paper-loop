@@ -7,9 +7,11 @@ struct ReviewView: View {
     @Query(sort: \Card.nextReviewAt)
     private var allCards: [Card]
 
+    @AppStorage("dailyNewCardLimit") private var dailyNewCardLimit = 10
+
     private var dueCards: [Card] {
         let now = Date()
-        return allCards.filter { $0.nextReviewAt <= now }
+        return allCards.filter { $0.introducedAt != nil && $0.nextReviewAt <= now }
     }
 
     @State private var currentIndex = 0
@@ -57,7 +59,7 @@ struct ReviewView: View {
             ZStack {
                 Theme.bg.ignoresSafeArea()
                 Group {
-                    if dueCards.isEmpty {
+                    if dueCards.isEmpty || currentIndex >= dueCards.count {
                         emptyStateView
                     } else {
                         reviewCardView
@@ -71,6 +73,12 @@ struct ReviewView: View {
             }
             .sheet(isPresented: $showTTSSettings) {
                 TTSSettingsSheet()
+            }
+            .task {
+                CardIntroductionService.introduceIfNeeded(
+                    context: modelContext,
+                    dailyLimit: dailyNewCardLimit
+                )
             }
         }
     }
@@ -258,6 +266,7 @@ struct ReviewView: View {
     // MARK: - Actions
 
     private func submitRating(_ rating: ReviewRating) {
+        guard currentIndex < dueCards.count else { return }
         let card = dueCards[currentIndex]
         ReviewScheduler.schedule(card: card, rating: rating)
         let log = ReviewLog(card: card, rating: rating.rawValue)
@@ -267,9 +276,17 @@ struct ReviewView: View {
             flipDegrees = 0
             showAnswer = false
         }
+        // Advance index after animation; re-evaluate dueCards.count at execution time
+        // to avoid capturing the stale count from this render cycle.
+        let capturedIndex = currentIndex
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
-            if currentIndex < dueCards.count - 1 {
-                currentIndex += 1
+            let count = dueCards.count
+            if count == 0 {
+                currentIndex = 0
+            } else if capturedIndex < count {
+                // Card at capturedIndex was removed; the next card slid into this slot.
+                // Stay at the same index (it now points to the next card).
+                currentIndex = capturedIndex
             } else {
                 currentIndex = 0
             }

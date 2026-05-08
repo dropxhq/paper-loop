@@ -52,7 +52,28 @@ struct paper_loopApp: App {
         WindowGroup {
             ContentView()
                 .preferredColorScheme(preferredScheme)
+                .task { runIntroducedAtMigrationIfNeeded() }
         }
         .modelContainer(sharedModelContainer)
+    }
+
+    /// 一次性迁移：为已有复习记录的卡片设置 introducedAt，新卡保持 nil（pending）。
+    @MainActor
+    private func runIntroducedAtMigrationIfNeeded() {
+        let key = "migration_introducedAt_v1_done"
+        guard !UserDefaults.standard.bool(forKey: key) else { return }
+        let context = sharedModelContainer.mainContext
+        let cards = (try? context.fetch(FetchDescriptor<Card>())) ?? []
+        for card in cards {
+            if card.introducedAt != nil { continue }
+            // repetitions==0 && interval==0 → 从未成功复习，保持 pending (nil)
+            if card.repetitions == 0 && card.interval == 0 {
+                card.introducedAt = nil
+            } else {
+                card.introducedAt = Date()
+            }
+        }
+        try? context.save()
+        UserDefaults.standard.set(true, forKey: key)
     }
 }
