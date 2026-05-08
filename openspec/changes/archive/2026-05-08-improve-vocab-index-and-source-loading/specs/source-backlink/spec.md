@@ -1,11 +1,7 @@
-## Requirements
+## MODIFIED Requirements
 
-### Requirement: 回链详情页展示
-系统 SHALL 在回链详情页展示来源论文信息、所有 occurrences 列表，每条 occurrence 可单独跳转原文。
-
-#### Scenario: 展示 occurrences 列表
-- **WHEN** 用户从卡片点击"回到原文"
-- **THEN** 展示所有 occurrences，每条显示：来源论文标题、章节名或页码、原句；条目按导入顺序排列
+### Requirement: 单条 occurrence 跳转原文
+系统 SHALL 在用户点击某条 occurrence 的"查看上下文"后，先展示加载状态，再打开对应论文的 HTML 或 PDF，并定位至对应段落/页码。
 
 #### Scenario: 单条 occurrence 跳转原文
 - **WHEN** 用户点击某条 occurrence 的"查看上下文"
@@ -33,12 +29,7 @@
 - **WHEN** `findString` 未找到原句
 - **THEN** 系统仍定位到对应页码，并提示"已定位到原文页码"
 
-### Requirement: PDF 本地缓存
-系统 SHALL 缓存已下载的 PDF 文件，避免重复下载。
-
-#### Scenario: PDF 已缓存
-- **WHEN** 同一 paper 的 PDF 已在本地缓存
-- **THEN** 直接读取本地文件，不发起网络请求
+## ADDED Requirements
 
 ### Requirement: 原文阅读统一加载与错误状态
 系统 SHALL 为 HTML 与 PDF 原文阅读提供统一的加载中、加载成功、加载失败状态，以避免静默等待与无响应感知。

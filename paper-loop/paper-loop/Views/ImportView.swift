@@ -295,7 +295,8 @@ struct ImportView: View {
         } else if cd.paragraphAnchor.hasPrefix("page:") {
             let pageStr = String(cd.paragraphAnchor.dropFirst("page:".count))
             if let page = Int(pageStr) {
-                return .pdf(page: page, bbox: .zero)
+                // ArXivFetchService stores 1-based page numbers; convert to 0-based for PDFDocument.page(at:)
+                return .pdf(page: max(0, page - 1), bbox: .zero)
             }
         }
         return nil

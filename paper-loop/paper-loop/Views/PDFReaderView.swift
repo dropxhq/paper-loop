@@ -5,6 +5,8 @@ struct PDFReaderView: UIViewRepresentable {
     let pdfURL: URL
     let targetPage: Int
     let searchText: String
+    var onLoaded: (() -> Void)? = nil
+    var onFailed: ((String) -> Void)? = nil
 
     func makeUIView(context: Context) -> PDFView {
         let pdfView = PDFView()
@@ -17,9 +19,13 @@ struct PDFReaderView: UIViewRepresentable {
         Task {
             let localURL = await PDFCache.shared.localURL(for: pdfURL)
             await MainActor.run {
-                guard let document = PDFDocument(url: localURL) else { return }
+                guard let document = PDFDocument(url: localURL) else {
+                    onFailed?("无法加载 PDF 文件")
+                    return
+                }
                 pdfView.document = document
                 navigateAndHighlight(pdfView: pdfView, document: document)
+                onLoaded?()
             }
         }
     }

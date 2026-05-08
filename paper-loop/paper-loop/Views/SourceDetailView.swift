@@ -61,24 +61,8 @@ struct SourceDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $openReader) {
             if let occurrence = selectedOccurrence {
-                readerSheet(for: occurrence)
+                ReaderContainerView(occurrence: occurrence)
             }
-        }
-    }
-
-    @ViewBuilder
-    private func readerSheet(for occurrence: Occurrence) -> some View {
-        if let anchor = occurrence.anchor {
-            switch anchor {
-            case .html(let elementId, let htmlURL, _):
-                HTMLReaderView(url: htmlURL, elementId: elementId, highlightText: occurrence.sourceSentence)
-            case .pdf(let page, _):
-                if let paper = occurrence.paper {
-                    PDFReaderView(pdfURL: paper.pdfURL, targetPage: page, searchText: occurrence.sourceSentence)
-                }
-            }
-        } else if let paper = occurrence.paper, let htmlURL = paper.htmlURL {
-            HTMLReaderView(url: htmlURL, elementId: nil, highlightText: occurrence.sourceSentence)
         }
     }
 }

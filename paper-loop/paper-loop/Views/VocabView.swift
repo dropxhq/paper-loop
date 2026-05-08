@@ -1,6 +1,18 @@
 import SwiftUI
 import SwiftData
 
+// MARK: - Alphabet grouping helpers
+
+private let kAlphabetLetters: [String] = (65...90).map { String(UnicodeScalar($0)!) } + ["#"]
+
+private func groupLetter(for term: String) -> String {
+    guard let first = term.first else { return "#" }
+    let upper = String(first).uppercased()
+    return upper >= "A" && upper <= "Z" ? upper : "#"
+}
+
+// MARK: - VocabView
+
 struct VocabView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Card.term)
@@ -11,6 +23,9 @@ struct VocabView: View {
     @State private var isEditing = false
     @State private var selectedCards: Set<PersistentIdentifier> = []
     @State private var showDeleteConfirm = false
+    @State private var draggingLetter: String? = nil
+
+    // MARK: - Filtered & Grouped data
 
     private var filteredCards: [Card] {
         cards.filter { card in
@@ -20,6 +35,25 @@ struct VocabView: View {
             let matchesType = selectedType == nil || card.type == selectedType
             return matchesSearch && matchesType
         }
+    }
+
+    /// Groups filteredCards by first letter, ordered A-Z then #.
+    private var groupedCards: [(letter: String, cards: [Card])] {
+        var dict: [String: [Card]] = [:]
+        for card in filteredCards {
+            let letter = groupLetter(for: card.term)
+            dict[letter, default: []].append(card)
+        }
+        let sorted = kAlphabetLetters.compactMap { letter -> (String, [Card])? in
+            guard let group = dict[letter], !group.isEmpty else { return nil }
+            return (letter, group)
+        }
+        return sorted
+    }
+
+    /// Letters that actually have cards, for the index bar.
+    private var availableLetters: [String] {
+        groupedCards.map(\.letter)
     }
 
     var body: some View {
@@ -118,51 +152,162 @@ struct VocabView: View {
         }
     }
 
+    // MARK: - Grouped list with alphabet index
+
     private var cardListView: some View {
-        ScrollView {
-            LazyVStack(spacing: 8) {
-                if filteredCards.isEmpty {
-                    Text("无匹配结果")
-                        .foregroundStyle(Theme.textMuted)
-                        .padding(.top, 40)
-                } else {
-                    ForEach(filteredCards) { card in
-                        if isEditing {
-                            Button {
-                                let id = card.persistentModelID
-                                if selectedCards.contains(id) {
-                                    selectedCards.remove(id)
-                                } else {
-                                    selectedCards.insert(id)
-                                }
-                            } label: {
-                                HStack(spacing: 10) {
-                                    Image(systemName: selectedCards.contains(card.persistentModelID) ? "checkmark.circle.fill" : "circle")
-                                        .foregroundStyle(selectedCards.contains(card.persistentModelID) ? Theme.primary : Theme.textMuted)
-                                        .font(.system(size: 22))
-                                    VocabRowView(card: card)
-                                }
+        ZStack(alignment: .trailing) {
+            if filteredCards.isEmpty {
+                Text("无匹配结果")
+                    .foregroundStyle(Theme.textMuted)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding(.top, 40)
+            } else {
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack(spacing: 0, pinnedViews: []) {
+                            // When searching, show flat list; otherwise show grouped
+                            if !searchText.isEmpty {
+                                flatList
+                            } else {
+                                groupedList
                             }
-                            .buttonStyle(.plain)
-                        } else {
-                            NavigationLink(destination: SourceDetailView(card: card)) {
-                                VocabRowView(card: card)
-                            }
-                            .buttonStyle(.plain)
-                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                Button(role: .destructive) {
-                                    modelContext.delete(card)
-                                } label: {
-                                    Label("删除", systemImage: "trash")
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                    }
+                    .overlay(alignment: .trailing) {
+                        // Show index bar only when not searching and not editing
+                        if searchText.isEmpty && !isEditing && availableLetters.count > 1 {
+                            AlphabetIndexBar(
+                                activeLetters: Set(availableLetters),
+                                draggingLetter: $draggingLetter
+                            ) { letter in
+                                withAnimation(.easeInOut(duration: 0.25)) {
+                                    proxy.scrollTo("section-\(letter)", anchor: .top)
                                 }
                             }
+                            .padding(.trailing, 4)
                         }
                     }
                 }
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
+
+            // Floating letter indicator shown during drag
+            if let letter = draggingLetter {
+                Text(letter)
+                    .font(.system(size: 44, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+                    .frame(width: 80, height: 80)
+                    .background(Theme.primary.opacity(0.88))
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .allowsHitTesting(false)
+            }
         }
+    }
+
+    @ViewBuilder
+    private var groupedList: some View {
+        ForEach(groupedCards, id: \.letter) { group in
+            Color.clear
+                .frame(height: 0)
+                .id("section-\(group.letter)")
+            ForEach(group.cards) { card in
+                cardRow(card)
+                    .padding(.bottom, 8)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var flatList: some View {
+        ForEach(filteredCards) { card in
+            cardRow(card)
+                .padding(.bottom, 8)
+        }
+    }
+
+    @ViewBuilder
+    private func cardRow(_ card: Card) -> some View {
+        if isEditing {
+            Button {
+                let id = card.persistentModelID
+                if selectedCards.contains(id) {
+                    selectedCards.remove(id)
+                } else {
+                    selectedCards.insert(id)
+                }
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: selectedCards.contains(card.persistentModelID) ? "checkmark.circle.fill" : "circle")
+                        .foregroundStyle(selectedCards.contains(card.persistentModelID) ? Theme.primary : Theme.textMuted)
+                        .font(.system(size: 22))
+                    VocabRowView(card: card)
+                }
+            }
+            .buttonStyle(.plain)
+        } else {
+            NavigationLink(destination: SourceDetailView(card: card)) {
+                VocabRowView(card: card)
+            }
+            .buttonStyle(.plain)
+            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                Button(role: .destructive) {
+                    modelContext.delete(card)
+                } label: {
+                    Label("删除", systemImage: "trash")
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Alphabet Index Bar
+
+struct AlphabetIndexBar: View {
+    /// Letters that actually have content (used for highlighting & scrolling).
+    let activeLetters: Set<String>
+    @Binding var draggingLetter: String?
+    let onSelect: (String) -> Void
+
+    /// Always show the full alphabet so spacing stays consistent.
+    private let allLetters: [String] = kAlphabetLetters
+
+    var body: some View {
+        VStack(spacing: 2) {
+            ForEach(allLetters, id: \.self) { letter in
+                let isActive = activeLetters.contains(letter)
+                Text(letter)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(
+                        draggingLetter == letter
+                            ? Theme.primary
+                            : isActive ? Theme.textMuted : Theme.textMuted.opacity(0.3)
+                    )
+                    .frame(width: 22, height: 14)
+                    .contentShape(Rectangle())
+            }
+        }
+        .frame(width: 22)
+        .gesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { value in
+                    let itemHeight: CGFloat = 16 // spacing(2) + height(14)
+                    let index = max(0, min(allLetters.count - 1, Int(value.location.y / itemHeight)))
+                    let letter = allLetters[index]
+                    guard activeLetters.contains(letter) else { return }
+                    if draggingLetter != letter {
+                        draggingLetter = letter
+                        onSelect(letter)
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    }
+                }
+                .onEnded { _ in
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        draggingLetter = nil
+                    }
+                }
+        )
     }
 }
 

@@ -641,6 +641,9 @@
         }
       }
     },
+    "关闭" : {
+
+    },
     "出现记录" : {
       "comment" : "Source detail section",
       "extractionState" : "stale",
@@ -888,6 +891,9 @@
       }
     },
     "原文" : {
+
+    },
+    "原文加载失败" : {
 
     },
     "取消" : {
@@ -1805,6 +1811,9 @@
         }
       }
     },
+    "改用 PDF 打开" : {
+
+    },
     "无匹配结果" : {
 
     },
@@ -2266,6 +2275,9 @@
           }
         }
       }
+    },
+    "正在加载原文…" : {
+
     },
     "正常" : {
       "comment" : "Settings row subtitle speed normal",
@@ -3500,6 +3512,9 @@
           }
         }
       }
+    },
+    "重试" : {
+
     },
     "音色" : {
       "comment" : "TTS settings section header",
