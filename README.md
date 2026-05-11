@@ -9,6 +9,10 @@
   [![Platform](https://img.shields.io/badge/platform-iOS%2018%2B-black?style=flat-square)](https://developer.apple.com/swift/)
   [![Swift](https://img.shields.io/badge/Swift-6-f05138?style=flat-square&logo=swift)](https://swift.org)
 
+  <br/>
+
+  ### [📲 立即在 App Store 下载](https://apps.apple.com/cn/app/%E8%AE%BA%E6%96%87%E8%AF%8D%E5%8D%A1/id6766549125)
+
 </div>
 
 ---
